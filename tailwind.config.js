@@ -12,8 +12,14 @@ export default {
 
     theme: {
         extend: {
+            colors: {
+                primary: '#255d74',
+                secondary: '#ff4d30',
+                accent: '#e0f2f1',
+            },
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Comfortaa', ...defaultTheme.fontFamily.sans],
+                comfortaa: ['Comfortaa', 'sans-serif'],
             },
         },
     },
