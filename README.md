@@ -41,4 +41,4 @@ Phone: 0821-1010-3938
 
 ## License
 
-Proprietary - All rights reserved by Universitas Muhammadiyah Gresik.
+Proprietary - All rights reserved by Artificial Intelligence Center Indonesia (AICI)
