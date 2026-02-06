@@ -50,4 +50,20 @@ Route::get('/join', function () {
     return Inertia::render('JoinNow');
 })->name('join');
 
+// Placement Test Routes
+Route::prefix('placement-test')->name('placement-test.')->group(function () {
+    // Public routes
+    Route::get('/', [App\Http\Controllers\PlacementTestController::class, 'index'])->name('index');
+    Route::get('/{test:slug}', [App\Http\Controllers\PlacementTestController::class, 'show'])->name('show');
+    
+    // Authenticated routes
+    Route::middleware('auth')->group(function () {
+        Route::post('/{test}/start', [App\Http\Controllers\PlacementTestController::class, 'start'])->name('start');
+        Route::get('/attempt/{attempt}', [App\Http\Controllers\PlacementTestController::class, 'attempt'])->name('attempt');
+        Route::post('/attempt/{attempt}/answer', [App\Http\Controllers\PlacementTestController::class, 'submitAnswer'])->name('answer');
+        Route::post('/attempt/{attempt}/complete', [App\Http\Controllers\PlacementTestController::class, 'complete'])->name('complete');
+        Route::get('/result/{attempt}', [App\Http\Controllers\PlacementTestController::class, 'result'])->name('result');
+    });
+});
+
 require __DIR__.'/auth.php';
