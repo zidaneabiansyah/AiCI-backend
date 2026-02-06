@@ -73,6 +73,16 @@ class Program extends Model
     }
 
     /**
+     * Scope with active classes
+     */
+    public function scopeWithActiveClasses($query)
+    {
+        return $query->whereHas('classes', function ($q) {
+            $q->where('is_active', true);
+        });
+    }
+
+    /**
      * Scope by education level
      */
     public function scopeForEducationLevel($query, string $level)

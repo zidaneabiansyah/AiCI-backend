@@ -48,7 +48,11 @@ class PaymentResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return PaymentsTable::configure($table);
+        return PaymentsTable::configure($table)
+            ->modifyQueryUsing(fn ($query) => $query->with([
+                'enrollment.class',
+                'user',
+            ]));
     }
 
     public static function getRelations(): array

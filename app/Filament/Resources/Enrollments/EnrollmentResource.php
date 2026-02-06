@@ -42,7 +42,13 @@ class EnrollmentResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return EnrollmentsTable::configure($table);
+        return EnrollmentsTable::configure($table)
+            ->modifyQueryUsing(fn ($query) => $query->with([
+                'class.program',
+                'payment',
+                'user',
+                'classSchedule',
+            ]));
     }
 
     public static function getRelations(): array

@@ -81,6 +81,15 @@ class Payment extends Model
     }
 
     /**
+     * Scope payments this month
+     */
+    public function scopeThisMonth($query)
+    {
+        return $query->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month);
+    }
+
+    /**
      * Check if payment is paid
      */
     public function isPaid(): bool

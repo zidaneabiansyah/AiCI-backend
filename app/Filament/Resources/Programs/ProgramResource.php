@@ -42,7 +42,8 @@ class ProgramResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return ProgramsTable::configure($table);
+        return ProgramsTable::configure($table)
+            ->modifyQueryUsing(fn ($query) => $query->withCount('classes'));
     }
 
     public static function getRelations(): array

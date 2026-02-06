@@ -66,7 +66,7 @@ class Enrollment extends Model
     /**
      * Get schedule
      */
-    public function schedule(): BelongsTo
+    public function classSchedule(): BelongsTo
     {
         return $this->belongsTo(ClassSchedule::class, 'class_schedule_id');
     }
