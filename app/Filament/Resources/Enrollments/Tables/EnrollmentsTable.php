@@ -31,7 +31,11 @@ class EnrollmentsTable
                 TextColumn::make('student_name')
                     ->label('Nama Siswa')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(function ($record) {
+                        // Admin sees full name, non-admin sees masked
+                        return $record->masked_student_name;
+                    }),
                 
                 TextColumn::make('class.name')
                     ->label('Kelas')
@@ -53,12 +57,22 @@ class EnrollmentsTable
                 TextColumn::make('student_email')
                     ->label('Email')
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(function ($record) {
+                        // Admin sees full email, non-admin sees masked
+                        return $record->masked_student_email;
+                    })
+                    ->copyable(fn ($record) => !shouldMaskData() ? $record->student_email : null),
                 
                 TextColumn::make('student_phone')
                     ->label('Telepon')
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(function ($record) {
+                        // Admin sees full phone, non-admin sees masked
+                        return $record->masked_student_phone;
+                    })
+                    ->copyable(fn ($record) => !shouldMaskData() ? $record->student_phone : null),
                 
                 TextColumn::make('student_age')
                     ->label('Usia')

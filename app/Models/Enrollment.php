@@ -36,6 +36,8 @@ class Enrollment extends Model
         'cancelled_at',
         'completed_at',
         'cancellation_reason',
+        'data_anonymized_at',
+        'scheduled_deletion_at',
     ];
 
     protected $casts = [
@@ -45,6 +47,8 @@ class Enrollment extends Model
         'confirmed_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'completed_at' => 'datetime',
+        'data_anonymized_at' => 'datetime',
+        'scheduled_deletion_at' => 'datetime',
     ];
 
     /**
@@ -132,5 +136,98 @@ class Enrollment extends Model
             'cancelled_at' => now(),
             'cancellation_reason' => $reason,
         ]);
+    }
+
+    /**
+     * ============================================
+     * DATA MASKING ACCESSORS
+     * ============================================
+     * 
+     * Accessor methods untuk protect PII (Personally Identifiable Information)
+     * Digunakan di admin panel untuk conditional masking based on user role
+     */
+
+    /**
+     * Get masked student email
+     * Admin: john.doe@example.com
+     * Non-admin: j***@example.com
+     */
+    public function getMaskedStudentEmailAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->student_email ?? '-';
+        }
+        
+        return maskEmail($this->student_email);
+    }
+
+    /**
+     * Get masked student phone
+     * Admin: 081234567890
+     * Non-admin: 0812****7890
+     */
+    public function getMaskedStudentPhoneAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->student_phone ?? '-';
+        }
+        
+        return maskPhone($this->student_phone);
+    }
+
+    /**
+     * Get masked student name
+     * Admin: John Doe
+     * Non-admin: John D***
+     */
+    public function getMaskedStudentNameAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->student_name ?? '-';
+        }
+        
+        return maskName($this->student_name);
+    }
+
+    /**
+     * Get masked parent name
+     * Admin: Jane Doe
+     * Non-admin: Jane D***
+     */
+    public function getMaskedParentNameAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->parent_name ?? '-';
+        }
+        
+        return maskName($this->parent_name);
+    }
+
+    /**
+     * Get masked parent phone
+     * Admin: 081234567890
+     * Non-admin: 0812****7890
+     */
+    public function getMaskedParentPhoneAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->parent_phone ?? '-';
+        }
+        
+        return maskPhone($this->parent_phone);
+    }
+
+    /**
+     * Get masked parent email
+     * Admin: parent@example.com
+     * Non-admin: p***@example.com
+     */
+    public function getMaskedParentEmailAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->parent_email ?? '-';
+        }
+        
+        return maskEmail($this->parent_email);
     }
 }

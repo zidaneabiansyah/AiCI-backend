@@ -43,13 +43,38 @@ class PaymentForm
                     ->options(PaymentStatus::class)
                     ->default('pending')
                     ->required(),
-                TextInput::make('xendit_invoice_id'),
+                TextInput::make('xendit_invoice_id')
+                    ->formatStateUsing(function ($state, $record) {
+                        // Saat view/edit, tampilkan masked untuk non-admin
+                        if ($record && shouldMaskData()) {
+                            return maskSensitiveData($state, 10, 0);
+                        }
+                        return $state;
+                    })
+                    ->disabled(fn ($record) => $record && shouldMaskData()), // Non-admin can't edit
                 TextInput::make('xendit_invoice_url')
                     ->url(),
-                TextInput::make('xendit_external_id'),
+                TextInput::make('xendit_external_id')
+                    ->formatStateUsing(function ($state, $record) {
+                        // Saat view/edit, tampilkan masked untuk non-admin
+                        if ($record && shouldMaskData()) {
+                            return maskSensitiveData($state, 10, 0);
+                        }
+                        return $state;
+                    })
+                    ->disabled(fn ($record) => $record && shouldMaskData()), // Non-admin can't edit
                 Textarea::make('xendit_response')
                     ->columnSpanFull(),
-                TextInput::make('account_number'),
+                TextInput::make('account_number')
+                    ->formatStateUsing(function ($state, $record) {
+                        // Saat view/edit, tampilkan masked untuk non-admin
+                        if ($record && shouldMaskData()) {
+                            return maskAccountNumber($state);
+                        }
+                        return $state;
+                    })
+                    ->dehydrateStateUsing(fn ($state) => $state) // Save original value
+                    ->disabled(fn ($record) => $record && shouldMaskData()), // Non-admin can't edit
                 DateTimePicker::make('paid_at'),
                 DateTimePicker::make('expired_at'),
                 Textarea::make('payment_proof')

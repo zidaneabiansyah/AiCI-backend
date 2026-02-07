@@ -66,13 +66,31 @@ class EnrollmentForm
                             ->label('Email Siswa')
                             ->email()
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->formatStateUsing(function ($state, $record) {
+                                // Saat view/edit, tampilkan masked untuk non-admin
+                                if ($record && shouldMaskData()) {
+                                    return maskEmail($state);
+                                }
+                                return $state;
+                            })
+                            ->dehydrateStateUsing(fn ($state) => $state) // Save original value
+                            ->disabled(fn ($record) => $record && shouldMaskData()), // Non-admin can't edit
                         
                         TextInput::make('student_phone')
                             ->label('No. Telepon Siswa')
                             ->tel()
                             ->required()
-                            ->maxLength(20),
+                            ->maxLength(20)
+                            ->formatStateUsing(function ($state, $record) {
+                                // Saat view/edit, tampilkan masked untuk non-admin
+                                if ($record && shouldMaskData()) {
+                                    return maskPhone($state);
+                                }
+                                return $state;
+                            })
+                            ->dehydrateStateUsing(fn ($state) => $state) // Save original value
+                            ->disabled(fn ($record) => $record && shouldMaskData()), // Non-admin can't edit
                         
                         TextInput::make('student_age')
                             ->label('Usia Siswa')
@@ -97,12 +115,30 @@ class EnrollmentForm
                         TextInput::make('parent_phone')
                             ->label('No. Telepon Orang Tua')
                             ->tel()
-                            ->maxLength(20),
+                            ->maxLength(20)
+                            ->formatStateUsing(function ($state, $record) {
+                                // Saat view/edit, tampilkan masked untuk non-admin
+                                if ($record && shouldMaskData()) {
+                                    return maskPhone($state);
+                                }
+                                return $state;
+                            })
+                            ->dehydrateStateUsing(fn ($state) => $state) // Save original value
+                            ->disabled(fn ($record) => $record && shouldMaskData()), // Non-admin can't edit
                         
                         TextInput::make('parent_email')
                             ->label('Email Orang Tua')
                             ->email()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->formatStateUsing(function ($state, $record) {
+                                // Saat view/edit, tampilkan masked untuk non-admin
+                                if ($record && shouldMaskData()) {
+                                    return maskEmail($state);
+                                }
+                                return $state;
+                            })
+                            ->dehydrateStateUsing(fn ($state) => $state) // Save original value
+                            ->disabled(fn ($record) => $record && shouldMaskData()), // Non-admin can't edit
                     ])
                     ->columns(3),
                 

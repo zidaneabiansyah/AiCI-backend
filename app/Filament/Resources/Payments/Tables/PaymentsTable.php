@@ -37,7 +37,11 @@ class PaymentsTable
                 TextColumn::make('enrollment.student_name')
                     ->label('Nama Siswa')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(function ($record) {
+                        // Admin sees full name, non-admin sees masked
+                        return $record->enrollment?->masked_student_name ?? '-';
+                    }),
                 
                 TextColumn::make('enrollment.class.name')
                     ->label('Kelas')

@@ -35,6 +35,8 @@ class Payment extends Model
         'refunded_at',
         'refund_amount',
         'refund_reason',
+        'data_anonymized_at',
+        'scheduled_deletion_at',
     ];
 
     protected $casts = [
@@ -46,6 +48,8 @@ class Payment extends Model
         'expired_at' => 'datetime',
         'refunded_at' => 'datetime',
         'status' => PaymentStatus::class,
+        'data_anonymized_at' => 'datetime',
+        'scheduled_deletion_at' => 'datetime',
     ];
 
     /**
@@ -124,5 +128,56 @@ class Payment extends Model
         $this->update([
             'status' => PaymentStatus::FAILED,
         ]);
+    }
+
+    /**
+     * ============================================
+     * DATA MASKING ACCESSORS
+     * ============================================
+     * 
+     * Accessor methods untuk protect PII (Personally Identifiable Information)
+     * Digunakan di admin panel untuk conditional masking based on user role
+     */
+
+    /**
+     * Get masked account number
+     * Admin: 1234567890123456
+     * Non-admin: ****-****-****-3456
+     */
+    public function getMaskedAccountNumberAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->account_number ?? '-';
+        }
+        
+        return maskAccountNumber($this->account_number);
+    }
+
+    /**
+     * Get masked xendit invoice ID
+     * Admin: full ID
+     * Non-admin: first 10 chars + ***
+     */
+    public function getMaskedXenditInvoiceIdAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->xendit_invoice_id ?? '-';
+        }
+        
+        return maskSensitiveData($this->xendit_invoice_id, 10, 0);
+    }
+
+    /**
+     * Get masked xendit external ID
+     * Admin: full ID
+     * Non-admin: first 10 chars + ***
+     */
+    public function getMaskedXenditExternalIdAttribute(): string
+    {
+        if (!shouldMaskData()) {
+            return $this->xendit_external_id ?? '-';
+        }
+        
+        return maskSensitiveData($this->xendit_external_id, 10, 0);
     }
 }
