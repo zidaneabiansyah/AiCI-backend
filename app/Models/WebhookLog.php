@@ -72,14 +72,40 @@ class WebhookLog extends Model
     }
 
     /**
-     * Check if this external_id was already processed
+     * Check if this external_id was already processed successfully
      * (Detect replay attacks)
+     * 
+     * Security Logic:
+     * - Check if external_id already processed successfully
+     * - Ignore failed attempts (allow retry for legitimate failures)
+     * - Consider recent attempts only (last 24 hours) to prevent false positives
+     * 
+     * @param string $externalId
+     * @param string $source
+     * @return bool
      */
     public static function isReplayAttack(string $externalId, string $source): bool
     {
         return static::where('external_id', $externalId)
             ->where('source', $source)
             ->where('status', 'success')
+            ->where('created_at', '>=', now()->subHours(24)) // Check last 24 hours only
             ->exists();
+    }
+
+    /**
+     * Get recent failed attempts from same IP
+     * (Detect brute force attacks)
+     * 
+     * @param string $ipAddress
+     * @param int $minutes
+     * @return int
+     */
+    public static function getRecentFailedAttempts(string $ipAddress, int $minutes = 5): int
+    {
+        return static::where('ip_address', $ipAddress)
+            ->whereIn('status', ['failed', 'invalid'])
+            ->where('created_at', '>=', now()->subMinutes($minutes))
+            ->count();
     }
 }

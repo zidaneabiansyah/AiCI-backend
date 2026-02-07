@@ -63,7 +63,8 @@ class WebhookController extends Controller
             'external_id' => $externalId,
             'payload' => $webhookData,
             'headers' => [
-                'x-callback-token' => $request->header('x-callback-token'),
+                // SECURITY: Mask sensitive token (only store first 10 chars for debugging)
+                'x-callback-token' => substr($request->header('x-callback-token', ''), 0, 10) . '...',
                 'x-signature' => $request->header('x-signature'),
                 'content-type' => $request->header('content-type'),
             ],
@@ -80,7 +81,28 @@ class WebhookController extends Controller
         ]);
 
         try {
-            // 2. Verify webhook signature
+            // 2. Check for brute force attacks (too many failed attempts)
+            $recentFailedAttempts = WebhookLog::getRecentFailedAttempts($request->ip(), 5);
+            
+            if ($recentFailedAttempts >= 10) {
+                $webhookLog->update([
+                    'status' => 'invalid',
+                    'error_message' => 'Too many failed attempts - IP temporarily blocked',
+                ]);
+
+                Log::channel('payment')->warning('Brute force attack detected', [
+                    'webhook_log_id' => $webhookLog->id,
+                    'ip' => $request->ip(),
+                    'failed_attempts' => $recentFailedAttempts,
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Too many requests',
+                ], 429);
+            }
+
+            // 3. Verify webhook signature
             $webhookToken = $request->header('x-callback-token');
             
             if (!$webhookToken) {
@@ -124,7 +146,7 @@ class WebhookController extends Controller
                 ], 401);
             }
 
-            // 3. Check for replay attack
+            // 4. Check for replay attack
             if ($externalId && WebhookLog::isReplayAttack($externalId, 'xendit')) {
                 $webhookLog->update([
                     'status' => 'invalid',
@@ -144,7 +166,7 @@ class WebhookController extends Controller
                 ]);
             }
 
-            // 4. Process webhook
+            // 5. Process webhook
             $result = $this->paymentService->handleWebhook($webhookData);
 
             if ($result) {
