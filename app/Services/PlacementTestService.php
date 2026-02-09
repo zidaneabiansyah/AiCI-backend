@@ -10,6 +10,7 @@ use App\Models\TestQuestion;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -45,80 +46,173 @@ class PlacementTestService extends BaseService
         array $preAssessmentData
     ): TestAttempt {
         return $this->transaction(function () use ($placementTest, $user, $preAssessmentData) {
-            // Validasi: Test harus active
-            if (!$placementTest->is_active) {
-                throw new Exception('Placement test tidak tersedia saat ini.');
-            }
-
-            // Check retake cooldown
-            if (!$placementTest->allow_retake) {
-                $existingAttempt = TestAttempt::where('user_id', $user->id)
-                    ->where('placement_test_id', $placementTest->id)
-                    ->where('status', TestStatus::COMPLETED->value)
-                    ->exists();
-
-                if ($existingAttempt) {
-                    throw new Exception('Anda sudah pernah mengikuti test ini.');
-                }
-            } else {
-                // Check cooldown period
-                $lastAttempt = TestAttempt::where('user_id', $user->id)
-                    ->where('placement_test_id', $placementTest->id)
-                    ->where('status', TestStatus::COMPLETED->value)
-                    ->latest('completed_at')
-                    ->first();
-
-                if ($lastAttempt) {
-                    $cooldownUntil = $lastAttempt->completed_at
-                        ->addDays($placementTest->retake_cooldown_days);
-
-                    if (now()->isBefore($cooldownUntil)) {
-                        $daysLeft = now()->diffInDays($cooldownUntil, false);
-                        throw new Exception(
-                            "Anda dapat mengulang test dalam {$daysLeft} hari lagi."
-                        );
-                    }
-                }
-            }
-
-            // Get active questions
-            $questions = $placementTest->getActiveQuestions();
+            $this->validateTestAvailability($placementTest);
+            $this->validateRetakeEligibility($placementTest, $user);
             
-            if ($questions->isEmpty()) {
-                throw new Exception('Tidak ada soal tersedia untuk test ini.');
-            }
-
-            // Calculate expiration time
+            $questions = $this->getValidatedQuestions($placementTest);
             $expiresAt = now()->addMinutes($placementTest->duration_minutes);
+            
+            $attempt = $this->createTestAttemptRecord(
+                $placementTest,
+                $user,
+                $preAssessmentData,
+                $questions,
+                $expiresAt
+            );
 
-            // Create test attempt
-            $attempt = TestAttempt::create([
-                'user_id' => $user->id,
-                'placement_test_id' => $placementTest->id,
-                'status' => TestStatus::IN_PROGRESS,
-                'full_name' => $preAssessmentData['full_name'],
-                'email' => $preAssessmentData['email'],
-                'age' => $preAssessmentData['age'],
-                'education_level' => $preAssessmentData['education_level'],
-                'current_grade' => $preAssessmentData['current_grade'] ?? null,
-                'experience' => $preAssessmentData['experience'],
-                'interests' => $preAssessmentData['interests'] ?? [],
-                'started_at' => now(),
-                'expires_at' => $expiresAt,
-                'total_questions' => $questions->count(),
-                'answered_questions' => 0,
-                'correct_answers' => 0,
-                'score' => 0,
-            ]);
-
-            $this->log('Test attempt created', [
-                'attempt_id' => $attempt->id,
-                'user_id' => $user->id,
-                'test_id' => $placementTest->id,
-            ]);
+            $this->logAttemptCreation($attempt, $user, $placementTest);
 
             return $attempt;
         });
+    }
+
+    /**
+     * Validate test is available
+     * 
+     * @param PlacementTest $placementTest
+     * @throws Exception
+     */
+    protected function validateTestAvailability(PlacementTest $placementTest): void
+    {
+        if (!$placementTest->is_active) {
+            throw new Exception('Placement test tidak tersedia saat ini.');
+        }
+    }
+
+    /**
+     * Validate user can retake test
+     * 
+     * @param PlacementTest $placementTest
+     * @param User $user
+     * @throws Exception
+     */
+    protected function validateRetakeEligibility(PlacementTest $placementTest, User $user): void
+    {
+        if (!$placementTest->allow_retake) {
+            $this->checkNoExistingAttempt($placementTest, $user);
+        } else {
+            $this->checkCooldownPeriod($placementTest, $user);
+        }
+    }
+
+    /**
+     * Check user has no existing completed attempt
+     * 
+     * @param PlacementTest $placementTest
+     * @param User $user
+     * @throws Exception
+     */
+    protected function checkNoExistingAttempt(PlacementTest $placementTest, User $user): void
+    {
+        $existingAttempt = TestAttempt::where('user_id', $user->id)
+            ->where('placement_test_id', $placementTest->id)
+            ->where('status', TestStatus::COMPLETED->value)
+            ->exists();
+
+        if ($existingAttempt) {
+            throw new Exception('Anda sudah pernah mengikuti test ini.');
+        }
+    }
+
+    /**
+     * Check cooldown period for retake
+     * 
+     * @param PlacementTest $placementTest
+     * @param User $user
+     * @throws Exception
+     */
+    protected function checkCooldownPeriod(PlacementTest $placementTest, User $user): void
+    {
+        $lastAttempt = TestAttempt::where('user_id', $user->id)
+            ->where('placement_test_id', $placementTest->id)
+            ->where('status', TestStatus::COMPLETED->value)
+            ->latest('completed_at')
+            ->first();
+
+        if (!$lastAttempt) {
+            return;
+        }
+
+        $cooldownUntil = $lastAttempt->completed_at->addDays($placementTest->retake_cooldown_days);
+
+        if (now()->isBefore($cooldownUntil)) {
+            $daysLeft = now()->diffInDays($cooldownUntil, false);
+            throw new Exception("Anda dapat mengulang test dalam {$daysLeft} hari lagi.");
+        }
+    }
+
+    /**
+     * Get and validate questions
+     * 
+     * @param PlacementTest $placementTest
+     * @return Collection
+     * @throws Exception
+     */
+    protected function getValidatedQuestions(PlacementTest $placementTest): Collection
+    {
+        $questions = $placementTest->getActiveQuestions();
+        
+        if ($questions->isEmpty()) {
+            throw new Exception('Tidak ada soal tersedia untuk test ini.');
+        }
+
+        return $questions;
+    }
+
+    /**
+     * Create test attempt record
+     * 
+     * @param PlacementTest $placementTest
+     * @param User $user
+     * @param array $preAssessmentData
+     * @param Collection $questions
+     * @param Carbon $expiresAt
+     * @return TestAttempt
+     */
+    protected function createTestAttemptRecord(
+        PlacementTest $placementTest,
+        User $user,
+        array $preAssessmentData,
+        Collection $questions,
+        Carbon $expiresAt
+    ): TestAttempt {
+        return TestAttempt::create([
+            'user_id' => $user->id,
+            'placement_test_id' => $placementTest->id,
+            'status' => TestStatus::IN_PROGRESS,
+            'full_name' => $preAssessmentData['full_name'],
+            'email' => $preAssessmentData['email'],
+            'age' => $preAssessmentData['age'],
+            'education_level' => $preAssessmentData['education_level'],
+            'current_grade' => $preAssessmentData['current_grade'] ?? null,
+            'experience' => $preAssessmentData['experience'],
+            'interests' => $preAssessmentData['interests'] ?? [],
+            'started_at' => now(),
+            'expires_at' => $expiresAt,
+            'total_questions' => $questions->count(),
+            'answered_questions' => 0,
+            'correct_answers' => 0,
+            'score' => 0,
+        ]);
+    }
+
+    /**
+     * Log attempt creation
+     * 
+     * @param TestAttempt $attempt
+     * @param User $user
+     * @param PlacementTest $placementTest
+     */
+    protected function logAttemptCreation(
+        TestAttempt $attempt,
+        User $user,
+        PlacementTest $placementTest
+    ): void {
+        $this->log('Test attempt created', [
+            'attempt_id' => $attempt->id,
+            'user_id' => $user->id,
+            'test_id' => $placementTest->id,
+        ]);
     }
 
     /**
@@ -147,65 +241,141 @@ class PlacementTestService extends BaseService
         int $timeSpentSeconds
     ): TestAnswer {
         return $this->transaction(function () use ($attempt, $question, $userAnswer, $timeSpentSeconds) {
-            // Validasi: Test harus in progress
-            if ($attempt->status !== TestStatus::IN_PROGRESS) {
-                throw new Exception('Test sudah selesai atau expired.');
-            }
-
-            // Validasi: Check expiration
-            if ($attempt->isExpired()) {
-                $attempt->updateStatus(TestStatus::EXPIRED);
-                throw new Exception('Waktu test telah habis.');
-            }
-
-            // Validasi: Question harus dari test yang sama
-            if ($question->placement_test_id !== $attempt->placement_test_id) {
-                throw new Exception('Soal tidak valid untuk test ini.');
-            }
-
-            // Check if already answered
-            $existingAnswer = TestAnswer::where('test_attempt_id', $attempt->id)
-                ->where('test_question_id', $question->id)
-                ->first();
-
-            if ($existingAnswer) {
-                throw new Exception('Soal ini sudah dijawab.');
-            }
-
-            // Check if answer is correct
+            $this->validateAnswerSubmission($attempt, $question);
+            
             $isCorrect = $this->checkAnswer($question, $userAnswer);
-
-            // Calculate points earned (dengan weight dari difficulty)
-            $pointsEarned = $isCorrect 
-                ? $question->points * $question->difficulty->weight()
-                : 0;
-
-            // Save answer
-            $answer = TestAnswer::create([
-                'test_attempt_id' => $attempt->id,
-                'test_question_id' => $question->id,
-                'user_answer' => $userAnswer,
-                'is_correct' => $isCorrect,
-                'points_earned' => $pointsEarned,
-                'time_spent_seconds' => $timeSpentSeconds,
-            ]);
-
-            // Update attempt statistics
-            $attempt->increment('answered_questions');
-            if ($isCorrect) {
-                $attempt->increment('correct_answers');
-            }
-            $attempt->increment('time_spent_seconds', $timeSpentSeconds);
-
-            $this->log('Answer saved', [
-                'attempt_id' => $attempt->id,
-                'question_id' => $question->id,
-                'is_correct' => $isCorrect,
-                'points' => $pointsEarned,
-            ]);
+            $pointsEarned = $this->calculatePointsEarned($question, $isCorrect);
+            
+            $answer = $this->createAnswerRecord($attempt, $question, $userAnswer, $isCorrect, $pointsEarned, $timeSpentSeconds);
+            $this->updateAttemptStatistics($attempt, $isCorrect, $timeSpentSeconds);
+            $this->logAnswerSaved($attempt, $question, $isCorrect, $pointsEarned);
 
             return $answer;
         });
+    }
+
+    /**
+     * Validate answer submission
+     * 
+     * @param TestAttempt $attempt
+     * @param TestQuestion $question
+     * @throws Exception
+     */
+    protected function validateAnswerSubmission(TestAttempt $attempt, TestQuestion $question): void
+    {
+        if ($attempt->status !== TestStatus::IN_PROGRESS) {
+            throw new Exception('Test sudah selesai atau expired.');
+        }
+
+        if ($attempt->isExpired()) {
+            $attempt->updateStatus(TestStatus::EXPIRED);
+            throw new Exception('Waktu test telah habis.');
+        }
+
+        if ($question->placement_test_id !== $attempt->placement_test_id) {
+            throw new Exception('Soal tidak valid untuk test ini.');
+        }
+
+        $this->checkNotAlreadyAnswered($attempt, $question);
+    }
+
+    /**
+     * Check question not already answered
+     * 
+     * @param TestAttempt $attempt
+     * @param TestQuestion $question
+     * @throws Exception
+     */
+    protected function checkNotAlreadyAnswered(TestAttempt $attempt, TestQuestion $question): void
+    {
+        $existingAnswer = TestAnswer::where('test_attempt_id', $attempt->id)
+            ->where('test_question_id', $question->id)
+            ->first();
+
+        if ($existingAnswer) {
+            throw new Exception('Soal ini sudah dijawab.');
+        }
+    }
+
+    /**
+     * Calculate points earned for answer
+     * 
+     * @param TestQuestion $question
+     * @param bool $isCorrect
+     * @return float
+     */
+    protected function calculatePointsEarned(TestQuestion $question, bool $isCorrect): float
+    {
+        return $isCorrect ? $question->points * $question->difficulty->weight() : 0;
+    }
+
+    /**
+     * Create answer record
+     * 
+     * @param TestAttempt $attempt
+     * @param TestQuestion $question
+     * @param string $userAnswer
+     * @param bool $isCorrect
+     * @param float $pointsEarned
+     * @param int $timeSpentSeconds
+     * @return TestAnswer
+     */
+    protected function createAnswerRecord(
+        TestAttempt $attempt,
+        TestQuestion $question,
+        string $userAnswer,
+        bool $isCorrect,
+        float $pointsEarned,
+        int $timeSpentSeconds
+    ): TestAnswer {
+        return TestAnswer::create([
+            'test_attempt_id' => $attempt->id,
+            'test_question_id' => $question->id,
+            'user_answer' => $userAnswer,
+            'is_correct' => $isCorrect,
+            'points_earned' => $pointsEarned,
+            'time_spent_seconds' => $timeSpentSeconds,
+        ]);
+    }
+
+    /**
+     * Update attempt statistics
+     * 
+     * @param TestAttempt $attempt
+     * @param bool $isCorrect
+     * @param int $timeSpentSeconds
+     */
+    protected function updateAttemptStatistics(TestAttempt $attempt, bool $isCorrect, int $timeSpentSeconds): void
+    {
+        $attempt->increment('answered_questions');
+        
+        if ($isCorrect) {
+            $attempt->increment('correct_answers');
+        }
+        
+        $attempt->increment('time_spent_seconds', $timeSpentSeconds);
+    }
+
+    /**
+     * Log answer saved
+     * 
+     * @param TestAttempt $attempt
+     * @param TestQuestion $question
+     * @param bool $isCorrect
+     * @param float $pointsEarned
+     */
+    protected function logAnswerSaved(
+        TestAttempt $attempt,
+        TestQuestion $question,
+        bool $isCorrect,
+        float $pointsEarned
+    ): void {
+        $this->log('Answer saved', [
+            'attempt_id' => $attempt->id,
+            'question_id' => $question->id,
+            'is_correct' => $isCorrect,
+            'points' => $pointsEarned,
+        ]);
     }
 
     /**
@@ -286,37 +456,57 @@ class PlacementTestService extends BaseService
         $answers = $attempt->answers()->with('testQuestion')->get();
         
         if ($answers->isEmpty()) {
-            return [
-                'overall_score' => 0,
-                'level_achieved' => 'beginner',
-                'category_scores' => [],
-            ];
+            return $this->getEmptyScoreResult();
         }
 
-        // Calculate total possible points (dengan weight)
-        $totalPossiblePoints = $answers->sum(function ($answer) {
-            return $answer->testQuestion->points * $answer->testQuestion->difficulty->weight();
-        });
-
-        // Calculate earned points
+        $totalPossiblePoints = $this->calculateTotalPossiblePoints($answers);
         $totalEarnedPoints = $answers->sum('points_earned');
-
-        // Calculate overall score (0-100)
-        $overallScore = $totalPossiblePoints > 0
-            ? $totalEarnedPoints / $totalPossiblePoints * 100
-            : 0;
-
-        // Calculate category scores
-        $categoryScores = $this->calculateCategoryScores($answers);
-
-        // Determine level achieved
-        $levelAchieved = $this->determineLevelAchieved($overallScore);
+        $overallScore = $this->calculateOverallScore($totalEarnedPoints, $totalPossiblePoints);
 
         return [
             'overall_score' => round($overallScore, 2),
-            'level_achieved' => $levelAchieved,
-            'category_scores' => $categoryScores,
+            'level_achieved' => $this->determineLevelAchieved($overallScore),
+            'category_scores' => $this->calculateCategoryScores($answers),
         ];
+    }
+
+    /**
+     * Get empty score result
+     * 
+     * @return array
+     */
+    protected function getEmptyScoreResult(): array
+    {
+        return [
+            'overall_score' => 0,
+            'level_achieved' => 'beginner',
+            'category_scores' => [],
+        ];
+    }
+
+    /**
+     * Calculate total possible points with difficulty weight
+     * 
+     * @param Collection $answers
+     * @return float
+     */
+    protected function calculateTotalPossiblePoints(Collection $answers): float
+    {
+        return $answers->sum(function ($answer) {
+            return $answer->testQuestion->points * $answer->testQuestion->difficulty->weight();
+        });
+    }
+
+    /**
+     * Calculate overall score percentage
+     * 
+     * @param float $earnedPoints
+     * @param float $possiblePoints
+     * @return float
+     */
+    protected function calculateOverallScore(float $earnedPoints, float $possiblePoints): float
+    {
+        return $possiblePoints > 0 ? $earnedPoints / $possiblePoints * 100 : 0;
     }
 
     /**
