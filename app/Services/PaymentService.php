@@ -431,10 +431,7 @@ class PaymentService extends BaseService
             );
 
             // If paid, confirm enrollment
-            if ($payment->status === PaymentStatus::PAID && $payment->enrollment->status->value === 'pending') {
-                $enrollmentService = app(EnrollmentService::class);
-                $enrollmentService->confirmEnrollment($payment->enrollment);
-            }
+            $this->confirmEnrollmentIfPaid($payment);
 
             return $payment->fresh();
 
@@ -537,5 +534,24 @@ class PaymentService extends BaseService
             'payment_method' => $payment->payment_method,
             'status' => 'LUNAS',
         ];
+    }
+
+    /**
+     * Confirm enrollment if payment is paid and enrollment is pending
+     * 
+     * @param Payment $payment
+     */
+    protected function confirmEnrollmentIfPaid(Payment $payment): void
+    {
+        if ($payment->status !== PaymentStatus::PAID) {
+            return;
+        }
+
+        if ($payment->enrollment->status->value !== 'pending') {
+            return;
+        }
+
+        $enrollmentService = app(EnrollmentService::class);
+        $enrollmentService->confirmEnrollment($payment->enrollment);
     }
 }

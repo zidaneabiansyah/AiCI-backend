@@ -62,28 +62,11 @@ class CheckExpiredPaymentsCommand extends Command
         $failed = 0;
 
         foreach ($expiredPayments as $payment) {
-            try {
-                if (!$isDryRun) {
-                    // Mark as expired
-                    $payment->update([
-                        'status' => PaymentStatus::EXPIRED,
-                    ]);
-
-                    // Send email notification
-                    Mail::to($payment->enrollment->student_email)
-                        ->send(new PaymentFailed(
-                            $payment,
-                            'Invoice telah kadaluarsa. Silakan buat invoice baru untuk melanjutkan pembayaran.'
-                        ));
-
-                    $this->line("   Processed: {$payment->invoice_number}");
-                    $processed++;
-                } else {
-                    $this->line("   Would process: {$payment->invoice_number}");
-                }
-
-            } catch (\Exception $e) {
-                $this->error("   Failed to process {$payment->invoice_number}: {$e->getMessage()}");
+            $result = $this->processExpiredPayment($payment, $isDryRun);
+            
+            if ($result['success']) {
+                $processed++;
+            } else {
                 $failed++;
             }
         }
@@ -101,5 +84,57 @@ class CheckExpiredPaymentsCommand extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Process a single expired payment
+     * 
+     * @param Payment $payment
+     * @param bool $isDryRun
+     * @return array
+     */
+    protected function processExpiredPayment(Payment $payment, bool $isDryRun): array
+    {
+        try {
+            if (!$isDryRun) {
+                $this->markPaymentAsExpired($payment);
+                $this->sendExpirationEmail($payment);
+                $this->line("   Processed: {$payment->invoice_number}");
+            } else {
+                $this->line("   Would process: {$payment->invoice_number}");
+            }
+
+            return ['success' => true];
+
+        } catch (\Exception $e) {
+            $this->error("   Failed to process {$payment->invoice_number}: {$e->getMessage()}");
+            return ['success' => false];
+        }
+    }
+
+    /**
+     * Mark payment as expired
+     * 
+     * @param Payment $payment
+     */
+    protected function markPaymentAsExpired(Payment $payment): void
+    {
+        $payment->update([
+            'status' => PaymentStatus::EXPIRED,
+        ]);
+    }
+
+    /**
+     * Send expiration email notification
+     * 
+     * @param Payment $payment
+     */
+    protected function sendExpirationEmail(Payment $payment): void
+    {
+        Mail::to($payment->enrollment->student_email)
+            ->send(new PaymentFailed(
+                $payment,
+                'Invoice telah kadaluarsa. Silakan buat invoice baru untuk melanjutkan pembayaran.'
+            ));
     }
 }

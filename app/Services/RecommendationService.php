@@ -237,34 +237,55 @@ class RecommendationService extends BaseService
      */
     protected function calculateExperienceMatch(array $userProfile, ClassModel $class): float
     {
-        $matchScore = 100;
-
-        // Beginner classes prefer no experience
         if ($class->level === 'beginner') {
-            $hasAnyExperience = $userProfile['has_ai_experience'] 
-                || $userProfile['has_robotics_experience'] 
-                || $userProfile['has_programming_experience'];
-            
-            return $hasAnyExperience ? 70 : 100;
+            return $this->calculateBeginnerExperienceMatch($userProfile);
         }
 
-        // Advanced classes prefer experience
         if ($class->level === 'advanced') {
-            $experienceCount = 0;
-            if ($userProfile['has_ai_experience']) {
-                $experienceCount++;
-            }
-            if ($userProfile['has_robotics_experience']) {
-                $experienceCount++;
-            }
-            if ($userProfile['has_programming_experience']) {
-                $experienceCount++;
-            }
-
-            return min(100, 50 + ($experienceCount * 16.67)); // 50% base + up to 50% from experience
+            return $this->calculateAdvancedExperienceMatch($userProfile);
         }
 
-        return $matchScore;
+        return 100; // Intermediate/elementary - neutral
+    }
+
+    /**
+     * Calculate experience match for beginner classes
+     * Beginner classes prefer no experience
+     * 
+     * @param array $userProfile
+     * @return float
+     */
+    protected function calculateBeginnerExperienceMatch(array $userProfile): float
+    {
+        $hasAnyExperience = $userProfile['has_ai_experience'] 
+            || $userProfile['has_robotics_experience'] 
+            || $userProfile['has_programming_experience'];
+        
+        return $hasAnyExperience ? 70 : 100;
+    }
+
+    /**
+     * Calculate experience match for advanced classes
+     * Advanced classes prefer multiple experiences
+     * 
+     * @param array $userProfile
+     * @return float
+     */
+    protected function calculateAdvancedExperienceMatch(array $userProfile): float
+    {
+        $experienceCount = 0;
+        
+        if ($userProfile['has_ai_experience']) {
+            $experienceCount++;
+        }
+        if ($userProfile['has_robotics_experience']) {
+            $experienceCount++;
+        }
+        if ($userProfile['has_programming_experience']) {
+            $experienceCount++;
+        }
+
+        return min(100, 50 + ($experienceCount * 16.67)); // 50% base + up to 50% from experience
     }
 
     /**
@@ -313,20 +334,40 @@ class RecommendationService extends BaseService
             return 100; // No age restriction
         }
 
-        // Perfect match if in range
-        if ($userAge >= $class->min_age && $userAge <= $class->max_age) {
-            return 100;
+        if ($this->isAgeInRange($userAge, $class)) {
+            return 100; // Perfect match
         }
 
-        // Calculate distance from range
-        if ($userAge < $class->min_age) {
-            $distance = $class->min_age - $userAge;
-        } else {
-            $distance = $userAge - $class->max_age;
-        }
-
-        // Reduce match by distance
+        $distance = $this->calculateAgeDistance($userAge, $class);
         return max(0, 100 - ($distance * 10));
+    }
+
+    /**
+     * Check if user age is within class age range
+     * 
+     * @param int $userAge
+     * @param ClassModel $class
+     * @return bool
+     */
+    protected function isAgeInRange(int $userAge, ClassModel $class): bool
+    {
+        return $userAge >= $class->min_age && $userAge <= $class->max_age;
+    }
+
+    /**
+     * Calculate distance from age range
+     * 
+     * @param int $userAge
+     * @param ClassModel $class
+     * @return int
+     */
+    protected function calculateAgeDistance(int $userAge, ClassModel $class): int
+    {
+        if ($userAge < $class->min_age) {
+            return $class->min_age - $userAge;
+        }
+        
+        return $userAge - $class->max_age;
     }
 
     /**
