@@ -100,9 +100,12 @@ class EnrollmentController extends BaseController
         }
 
         // Load schedules
-        $class->load(['program', 'schedules' => function ($query) {
-            $query->available()->orderBy('start_date');
-        }]);
+        $class->load([
+            'program',
+            'schedules' => function ($query) {
+                $query->available()->orderBy('start_date');
+            }
+        ]);
 
         // Get user's latest test result (if any)
         $testResult = auth()->user()

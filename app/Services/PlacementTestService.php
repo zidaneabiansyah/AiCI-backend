@@ -303,7 +303,7 @@ class PlacementTestService extends BaseService
 
         // Calculate overall score (0-100)
         $overallScore = $totalPossiblePoints > 0
-            ? ($totalEarnedPoints / $totalPossiblePoints) * 100
+            ? $totalEarnedPoints / $totalPossiblePoints * 100
             : 0;
 
         // Calculate category scores
@@ -342,7 +342,7 @@ class PlacementTestService extends BaseService
             $earnedPoints = $categoryAnswers->sum('points_earned');
 
             $categoryScores[$category] = $totalPoints > 0
-                ? round(($earnedPoints / $totalPoints) * 100, 2)
+                ? round($earnedPoints / $totalPoints * 100, 2)
                 : 0;
         }
 

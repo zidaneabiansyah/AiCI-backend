@@ -25,8 +25,7 @@ import MainLayout from "@/Layouts/MainLayout.vue";
                     >?
                 </h1>
                 <p class="text-lg opacity-70 leading-relaxed italic">
-                    Halaman pendaftaran dan Placement Test akan segera hadir di
-                    Phase 3. <br />
+                    Halaman pendaftaran dan Placement Test akan segera hadir. <br />
                     Pantau terus untuk update selanjutnya!
                 </p>
                 <div class="pt-8">

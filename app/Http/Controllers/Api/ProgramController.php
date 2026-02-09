@@ -62,11 +62,13 @@ class ProgramController extends Controller
     public function show(string $slug)
     {
         $program = Program::where('slug', $slug)
-            ->with(['classes' => function ($q) {
-                $q->active()
-                    ->with('schedules')
-                    ->orderBy('sort_order');
-            }])
+            ->with([
+                'classes' => function ($q) {
+                    $q->active()
+                        ->with('schedules')
+                        ->orderBy('sort_order');
+                }
+            ])
             ->firstOrFail();
 
         return new ProgramResource($program);

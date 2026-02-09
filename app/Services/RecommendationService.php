@@ -406,7 +406,7 @@ class RecommendationService extends BaseService
             $earnedPoints = $categoryAnswers->sum('points_earned');
 
             $categoryScores[$category] = $totalPoints > 0
-                ? round(($earnedPoints / $totalPoints) * 100, 2)
+                ? round($earnedPoints / $totalPoints * 100, 2)
                 : 0;
         }
 

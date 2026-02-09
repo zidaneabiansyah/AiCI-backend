@@ -161,9 +161,13 @@ class EnrollmentService extends BaseService
         }
 
         // Check other prerequisites (e.g., previous class completion)
-        if (!empty($class->prerequisites)) {
-            // TODO: Implement prerequisite checking logic
-            // For now, we assume prerequisites are informational only
+        // Note: Prerequisites are currently informational only
+        // Future: Implement strict prerequisite checking
+        if ($class->prerequisites !== null && $class->prerequisites !== '') {
+            $this->log('Class has prerequisites (informational only)', [
+                'class_id' => $class->id,
+                'prerequisites' => $class->prerequisites,
+            ], 'info');
         }
     }
 

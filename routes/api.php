@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * ============================================
- * API ROUTES - VERSION 
+ * API ROUTES
  * ============================================
  * 
  * RESTful API untuk mobile app

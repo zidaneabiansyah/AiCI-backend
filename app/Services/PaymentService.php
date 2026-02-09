@@ -384,7 +384,7 @@ class PaymentService extends BaseService
             $updateData['paid_at'] = $paidAt ? now()->parse($paidAt) : now();
             
             // Verify amount
-            if ($paidAmount != $payment->total_amount) {
+            if ($paidAmount !== $payment->total_amount) {
                 $this->log('Payment amount mismatch', [
                     'payment_id' => $payment->id,
                     'expected' => $payment->total_amount,

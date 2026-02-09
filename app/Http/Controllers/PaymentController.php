@@ -159,7 +159,11 @@ class PaymentController extends BaseController
         try {
             $payment = $this->paymentService->checkPaymentStatus($payment);
         } catch (\Exception $e) {
-            // Ignore error, just redirect
+            // Log error but continue to show success page
+            \Illuminate\Support\Facades\Log::warning('Failed to check payment status on success page', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return redirect()

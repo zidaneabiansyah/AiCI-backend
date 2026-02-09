@@ -118,9 +118,12 @@ class ClassController extends BaseController
     public function show(ClassModel $class)
     {
         // Load relationships
-        $class->load(['program', 'schedules' => function ($query) {
-            $query->available()->orderBy('start_date');
-        }]);
+        $class->load([
+            'program',
+            'schedules' => function ($query) {
+                $query->available()->orderBy('start_date');
+            }
+        ]);
 
         // Check if user can enroll
         $canEnroll = ['can_enroll' => true, 'reason' => null];

@@ -129,7 +129,7 @@ class Enrollment extends Model
     /**
      * Cancel enrollment
      */
-    public function cancel(string $reason = null): void
+    public function cancel(?string $reason = null): void
     {
         $this->update([
             'status' => EnrollmentStatus::CANCELLED,
