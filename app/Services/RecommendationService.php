@@ -251,9 +251,15 @@ class RecommendationService extends BaseService
         // Advanced classes prefer experience
         if ($class->level === 'advanced') {
             $experienceCount = 0;
-            if ($userProfile['has_ai_experience']) $experienceCount++;
-            if ($userProfile['has_robotics_experience']) $experienceCount++;
-            if ($userProfile['has_programming_experience']) $experienceCount++;
+            if ($userProfile['has_ai_experience']) {
+                $experienceCount++;
+            }
+            if ($userProfile['has_robotics_experience']) {
+                $experienceCount++;
+            }
+            if ($userProfile['has_programming_experience']) {
+                $experienceCount++;
+            }
 
             return min(100, 50 + ($experienceCount * 16.67)); // 50% base + up to 50% from experience
         }
@@ -270,7 +276,7 @@ class RecommendationService extends BaseService
      */
     protected function calculateInterestMatch(array $userInterests, ClassModel $class): float
     {
-        if (empty($userInterests)) {
+        if (count($userInterests) === 0) {
             return 50; // Neutral if no interests specified
         }
 
@@ -464,11 +470,11 @@ class RecommendationService extends BaseService
 
         $summary = "Anda berada di level {$level} dengan skor {$attempt->score}. ";
 
-        if (!empty($analysis['strengths'])) {
+        if (isset($analysis['strengths']) && count($analysis['strengths']) > 0) {
             $summary .= "Kekuatan Anda: " . implode(', ', $analysis['strengths']) . ". ";
         }
 
-        if (!empty($analysis['weaknesses'])) {
+        if (isset($analysis['weaknesses']) && count($analysis['weaknesses']) > 0) {
             $summary .= "Area yang perlu ditingkatkan: " . implode(', ', $analysis['weaknesses']) . ".";
         }
 
@@ -486,7 +492,7 @@ class RecommendationService extends BaseService
     {
         $steps = [];
 
-        if (!empty($recommendations)) {
+        if (count($recommendations) > 0) {
             $steps[] = "Pilih salah satu kelas yang direkomendasikan di bawah ini";
             $steps[] = "Daftar dan lakukan pembayaran";
             $steps[] = "Mulai perjalanan belajar AI & Robotics Anda!";

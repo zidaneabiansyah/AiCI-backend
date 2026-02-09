@@ -77,7 +77,7 @@ if (!function_exists('maskEmail')) {
      */
     function maskEmail(?string $email): string
     {
-        if (empty($email)) {
+        if ($email === null || $email === '') {
             return '-';
         }
 
@@ -110,7 +110,7 @@ if (!function_exists('maskPhone')) {
      */
     function maskPhone(?string $phone): string
     {
-        if (empty($phone)) {
+        if ($phone === null || $phone === '') {
             return '-';
         }
 
@@ -142,7 +142,7 @@ if (!function_exists('maskName')) {
      */
     function maskName(?string $name): string
     {
-        if (empty($name)) {
+        if ($name === null || $name === '') {
             return '-';
         }
 
@@ -178,7 +178,7 @@ if (!function_exists('maskAccountNumber')) {
      */
     function maskAccountNumber(?string $accountNumber): string
     {
-        if (empty($accountNumber)) {
+        if ($accountNumber === null || $accountNumber === '') {
             return '-';
         }
 
@@ -212,7 +212,7 @@ if (!function_exists('maskSensitiveData')) {
      */
     function maskSensitiveData(?string $data, int $visibleStart = 2, int $visibleEnd = 2): string
     {
-        if (empty($data)) {
+        if ($data === null || $data === '') {
             return '-';
         }
 

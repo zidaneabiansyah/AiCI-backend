@@ -109,7 +109,7 @@ class PaymentsTable
                     ->icon('heroicon-o-document-text')
                     ->url(fn ($record) => $record->xendit_invoice_url)
                     ->openUrlInNewTab()
-                    ->visible(fn ($record) => !empty($record->xendit_invoice_url)),
+                    ->visible(fn ($record) => $record->xendit_invoice_url !== null && $record->xendit_invoice_url !== ''),
                 Action::make('check_status')
                     ->label('Cek Status')
                     ->icon('heroicon-o-arrow-path')

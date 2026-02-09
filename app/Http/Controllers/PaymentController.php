@@ -134,13 +134,13 @@ class PaymentController extends BaseController
                     'Pembayaran berhasil! Terima kasih.',
                     ['payment' => $payment->id]
                 );
-            } else {
-                return $this->redirectWithSuccess(
-                    'payments.show',
-                    'Status pembayaran: ' . $payment->status->label(),
-                    ['payment' => $payment->id]
-                );
             }
+            
+            return $this->redirectWithSuccess(
+                'payments.show',
+                'Status pembayaran: ' . $payment->status->label(),
+                ['payment' => $payment->id]
+            );
 
         } catch (\Exception $e) {
             return $this->backWithError($e->getMessage());

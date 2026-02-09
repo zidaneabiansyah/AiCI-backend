@@ -15,13 +15,13 @@ trait Sluggable
     protected static function bootSluggable(): void
     {
         static::creating(function ($model) {
-            if (empty($model->slug)) {
+            if ($model->slug === null || $model->slug === '') {
                 $model->slug = $model->generateSlug();
             }
         });
 
         static::updating(function ($model) {
-            if ($model->isDirty($model->getSlugSource()) && empty($model->slug)) {
+            if ($model->isDirty($model->getSlugSource()) && ($model->slug === null || $model->slug === '')) {
                 $model->slug = $model->generateSlug();
             }
         });

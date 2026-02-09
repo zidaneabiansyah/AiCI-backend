@@ -59,7 +59,7 @@ class PaymentService extends BaseService
         $this->xenditWebhookToken = config('xendit.webhook_token');
 
         // Validate config
-        if (empty($this->xenditSecretKey)) {
+        if ($this->xenditSecretKey === null || $this->xenditSecretKey === '') {
             throw new Exception('Xendit secret key not configured. Check XENDIT_SECRET_KEY in .env');
         }
     }
@@ -466,7 +466,7 @@ class PaymentService extends BaseService
     public function verifyWebhookSignature(string $webhookToken, string $signature, string $payload): bool
     {
         // 1. Check if webhook token is configured
-        if (empty($this->xenditWebhookToken)) {
+        if ($this->xenditWebhookToken === null || $this->xenditWebhookToken === '') {
             $this->log('Xendit webhook token not configured', [], 'error');
             return false;
         }
@@ -482,7 +482,7 @@ class PaymentService extends BaseService
 
         // 3. Additional signature verification if provided (for enhanced security)
         // Some Xendit webhooks include x-signature header with HMAC
-        if (!empty($signature)) {
+        if ($signature !== null && $signature !== '') {
             // Compute HMAC SHA256 signature
             $computedSignature = hash_hmac('sha256', $payload, $this->xenditWebhookToken);
             

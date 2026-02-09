@@ -189,17 +189,17 @@ class WebhookController extends Controller
                     'success' => true,
                     'message' => 'Webhook processed successfully',
                 ]);
-            } else {
-                $webhookLog->update([
-                    'status' => 'failed',
-                    'error_message' => 'Webhook processing returned false',
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Webhook processing failed',
-                ], 400);
             }
+            
+            $webhookLog->update([
+                'status' => 'failed',
+                'error_message' => 'Webhook processing returned false',
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Webhook processing failed',
+            ], 400);
 
         } catch (\Exception $e) {
             // Update log with error

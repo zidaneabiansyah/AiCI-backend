@@ -365,13 +365,17 @@ class PlacementTestService extends BaseService
     {
         if ($score >= 80) {
             return 'advanced';
-        } elseif ($score >= 60) {
-            return 'intermediate';
-        } elseif ($score >= 40) {
-            return 'elementary';
-        } else {
-            return 'beginner';
         }
+        
+        if ($score >= 60) {
+            return 'intermediate';
+        }
+        
+        if ($score >= 40) {
+            return 'elementary';
+        }
+        
+        return 'beginner';
     }
 
     /**

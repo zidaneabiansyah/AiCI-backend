@@ -9,16 +9,6 @@ use Exception;
  */
 class PaymentException extends Exception
 {
-    /**
-     * Create a new payment exception instance
-     */
-    public function __construct(
-        string $message = 'Payment processing error',
-        int $code = 500,
-        ?Exception $previous = null
-    ) {
-        parent::__construct($message, $code, $previous);
-    }
 
     /**
      * Render the exception as an HTTP response
