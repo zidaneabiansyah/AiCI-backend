@@ -386,13 +386,28 @@ class PlacementTestService extends BaseService
      */
     public function getTestData(TestAttempt $attempt): array
     {
-        $questions = $attempt->placementTest
+        $questions = $this->getQuestionsWithAnswers($attempt);
+
+        return [
+            'attempt' => $attempt,
+            'questions' => $questions,
+            'progress' => $this->getProgressData($attempt),
+            'time_remaining' => $this->getTimeRemaining($attempt),
+        ];
+    }
+
+    /**
+     * Get questions with user answers
+     * 
+     * @param TestAttempt $attempt
+     * @return Collection
+     */
+    protected function getQuestionsWithAnswers(TestAttempt $attempt): Collection
+    {
+        return $attempt->placementTest
             ->getActiveQuestions()
             ->map(function ($question) use ($attempt) {
-                // Check if already answered
-                $answer = TestAnswer::where('test_attempt_id', $attempt->id)
-                    ->where('test_question_id', $question->id)
-                    ->first();
+                $answer = $this->findUserAnswer($attempt, $question);
 
                 return [
                     'id' => $question->id,
@@ -405,18 +420,49 @@ class PlacementTestService extends BaseService
                     'user_answer' => $answer?->user_answer,
                 ];
             });
+    }
 
+    /**
+     * Find user's answer for a question
+     * 
+     * @param TestAttempt $attempt
+     * @param TestQuestion $question
+     * @return TestAnswer|null
+     */
+    protected function findUserAnswer(TestAttempt $attempt, TestQuestion $question): ?TestAnswer
+    {
+        return TestAnswer::where('test_attempt_id', $attempt->id)
+            ->where('test_question_id', $question->id)
+            ->first();
+    }
+
+    /**
+     * Get test progress data
+     * 
+     * @param TestAttempt $attempt
+     * @return array
+     */
+    protected function getProgressData(TestAttempt $attempt): array
+    {
         return [
-            'attempt' => $attempt,
-            'questions' => $questions,
-            'progress' => [
-                'answered' => $attempt->answered_questions,
-                'total' => $attempt->total_questions,
-                'percentage' => $attempt->getCompletionPercentage(),
-            ],
-            'time_remaining' => $attempt->expires_at 
-                ? max(0, now()->diffInSeconds($attempt->expires_at, false))
-                : null,
+            'answered' => $attempt->answered_questions,
+            'total' => $attempt->total_questions,
+            'percentage' => $attempt->getCompletionPercentage(),
         ];
+    }
+
+    /**
+     * Get remaining time in seconds
+     * 
+     * @param TestAttempt $attempt
+     * @return int|null
+     */
+    protected function getTimeRemaining(TestAttempt $attempt): ?int
+    {
+        if (!$attempt->expires_at) {
+            return null;
+        }
+
+        return max(0, now()->diffInSeconds($attempt->expires_at, false));
     }
 }

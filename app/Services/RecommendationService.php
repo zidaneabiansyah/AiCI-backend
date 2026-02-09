@@ -28,41 +28,64 @@ class RecommendationService extends BaseService
     public function generateRecommendations(TestAttempt $attempt): TestResult
     {
         return $this->transaction(function () use ($attempt) {
-            // Analyze user profile
             $userProfile = $this->analyzeUserProfile($attempt);
-
-            // Get eligible classes
             $eligibleClasses = $this->getEligibleClasses($attempt);
-
-            // Calculate match for each class
             $recommendations = $this->calculateMatches($attempt, $eligibleClasses, $userProfile);
-
-            // Analyze strengths & weaknesses
             $analysis = $this->analyzePerformance($attempt);
 
-            // Create test result
-            $testResult = TestResult::create([
-                'test_attempt_id' => $attempt->id,
-                'user_id' => $attempt->user_id,
-                'overall_score' => $attempt->score,
-                'level_achieved' => $attempt->level_result,
-                'category_scores' => $this->getCategoryScores($attempt),
-                'strengths' => $analysis['strengths'],
-                'weaknesses' => $analysis['weaknesses'],
-                'recommended_classes' => $recommendations,
-                'recommendation_reasons' => $this->generateReasons($recommendations),
-                'performance_summary' => $this->generateSummary($attempt, $analysis),
-                'next_steps' => $this->generateNextSteps($attempt, $recommendations),
-            ]);
+            $testResult = $this->createTestResult($attempt, $recommendations, $analysis);
 
-            $this->log('Recommendations generated', [
-                'attempt_id' => $attempt->id,
-                'result_id' => $testResult->id,
-                'recommendations_count' => count($recommendations),
-            ]);
+            $this->logRecommendationGeneration($attempt, $testResult, $recommendations);
 
             return $testResult;
         });
+    }
+
+    /**
+     * Create test result record
+     * 
+     * @param TestAttempt $attempt
+     * @param array $recommendations
+     * @param array $analysis
+     * @return TestResult
+     */
+    protected function createTestResult(
+        TestAttempt $attempt,
+        array $recommendations,
+        array $analysis
+    ): TestResult {
+        return TestResult::create([
+            'test_attempt_id' => $attempt->id,
+            'user_id' => $attempt->user_id,
+            'overall_score' => $attempt->score,
+            'level_achieved' => $attempt->level_result,
+            'category_scores' => $this->getCategoryScores($attempt),
+            'strengths' => $analysis['strengths'],
+            'weaknesses' => $analysis['weaknesses'],
+            'recommended_classes' => $recommendations,
+            'recommendation_reasons' => $this->generateReasons($recommendations),
+            'performance_summary' => $this->generateSummary($attempt, $analysis),
+            'next_steps' => $this->generateNextSteps($attempt, $recommendations),
+        ]);
+    }
+
+    /**
+     * Log recommendation generation
+     * 
+     * @param TestAttempt $attempt
+     * @param TestResult $testResult
+     * @param array $recommendations
+     */
+    protected function logRecommendationGeneration(
+        TestAttempt $attempt,
+        TestResult $testResult,
+        array $recommendations
+    ): void {
+        $this->log('Recommendations generated', [
+            'attempt_id' => $attempt->id,
+            'result_id' => $testResult->id,
+            'recommendations_count' => count($recommendations),
+        ]);
     }
 
     /**
@@ -146,43 +169,85 @@ class RecommendationService extends BaseService
         $recommendations = [];
 
         foreach ($classes as $class) {
-            $matchScore = 0;
-
-            // 1. Score match (40%)
-            $scoreMatch = $this->calculateScoreMatch($attempt->score, $class->level);
-            $matchScore += $scoreMatch * 0.4;
-
-            // 2. Experience match (30%)
-            $experienceMatch = $this->calculateExperienceMatch($userProfile, $class);
-            $matchScore += $experienceMatch * 0.3;
-
-            // 3. Interest match (20%)
-            $interestMatch = $this->calculateInterestMatch($userProfile['interests'], $class);
-            $matchScore += $interestMatch * 0.2;
-
-            // 4. Age appropriateness (10%)
-            $ageMatch = $this->calculateAgeMatch($userProfile['age'], $class);
-            $matchScore += $ageMatch * 0.1;
-
-            $recommendations[] = [
-                'class_id' => $class->id,
-                'class_name' => $class->name,
-                'program_name' => $class->program->name,
-                'match_percentage' => round($matchScore, 2),
-                'price' => $class->price,
-                'duration_hours' => $class->duration_hours,
-                'level' => $class->level,
-                'reasons' => $this->generateMatchReasons($scoreMatch, $experienceMatch, $interestMatch, $ageMatch),
-            ];
+            $matchScore = $this->calculateOverallMatch($attempt, $class, $userProfile);
+            $recommendations[] = $this->buildRecommendation($class, $matchScore);
         }
 
-        // Sort by match percentage (descending)
+        return $this->getTopRecommendations($recommendations, 3);
+    }
+
+    /**
+     * Calculate overall match score for a class
+     * 
+     * @param TestAttempt $attempt
+     * @param ClassModel $class
+     * @param array $userProfile
+     * @return array
+     */
+    protected function calculateOverallMatch(
+        TestAttempt $attempt,
+        ClassModel $class,
+        array $userProfile
+    ): array {
+        $scoreMatch = $this->calculateScoreMatch($attempt->score, $class->level);
+        $experienceMatch = $this->calculateExperienceMatch($userProfile, $class);
+        $interestMatch = $this->calculateInterestMatch($userProfile['interests'], $class);
+        $ageMatch = $this->calculateAgeMatch($userProfile['age'], $class);
+
+        $totalScore = ($scoreMatch * 0.4) 
+            + ($experienceMatch * 0.3) 
+            + ($interestMatch * 0.2) 
+            + ($ageMatch * 0.1);
+
+        return [
+            'total' => $totalScore,
+            'score' => $scoreMatch,
+            'experience' => $experienceMatch,
+            'interest' => $interestMatch,
+            'age' => $ageMatch,
+        ];
+    }
+
+    /**
+     * Build recommendation array for a class
+     * 
+     * @param ClassModel $class
+     * @param array $matchScore
+     * @return array
+     */
+    protected function buildRecommendation(ClassModel $class, array $matchScore): array
+    {
+        return [
+            'class_id' => $class->id,
+            'class_name' => $class->name,
+            'program_name' => $class->program->name,
+            'match_percentage' => round($matchScore['total'], 2),
+            'price' => $class->price,
+            'duration_hours' => $class->duration_hours,
+            'level' => $class->level,
+            'reasons' => $this->generateMatchReasons(
+                $matchScore['score'],
+                $matchScore['experience'],
+                $matchScore['interest'],
+                $matchScore['age']
+            ),
+        ];
+    }
+
+    /**
+     * Get top N recommendations sorted by match percentage
+     * 
+     * @param array $recommendations
+     * @param int $limit
+     * @return array
+     */
+    protected function getTopRecommendations(array $recommendations, int $limit): array
+    {
         usort($recommendations, function ($a, $b) {
             return $b['match_percentage'] <=> $a['match_percentage'];
         });
 
-        // Return top 3 recommendations
-        return array_slice($recommendations, 0, 3);
+        return array_slice($recommendations, 0, $limit);
     }
 
     /**
