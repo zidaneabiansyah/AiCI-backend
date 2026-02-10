@@ -19,6 +19,11 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             ProgramSeeder::class,
             ClassSeeder::class,
+            ClassScheduleSeeder::class,
+            PlacementTestSeeder::class,
+            ArticleSeeder::class,
+            FacilitySeeder::class,
+            GallerySeeder::class,
         ]);
     }
 }
