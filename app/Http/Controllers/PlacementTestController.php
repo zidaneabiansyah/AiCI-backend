@@ -116,7 +116,7 @@ class PlacementTestController extends BaseController
     public function start(StartTestRequest $request, PlacementTest $test)
     {
         try {
-            $user = auth()->user() ?? auth()->loginUsingId(1); // Guest support (temp)
+            $user = auth()->user();
 
             $attempt = $this->testService->createAttempt(
                 $test,

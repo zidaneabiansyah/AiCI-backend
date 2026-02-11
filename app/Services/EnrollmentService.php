@@ -72,13 +72,14 @@ class EnrollmentService extends BaseService
                 }
             }
 
-            // 5. Check duplicate enrollment
+            // 5. Check duplicate enrollment with lock to prevent race condition
             $existingEnrollment = Enrollment::where('user_id', $user->id)
                 ->where('class_id', $class->id)
                 ->whereIn('status', [
                     EnrollmentStatus::PENDING->value,
                     EnrollmentStatus::CONFIRMED->value,
                 ])
+                ->lockForUpdate()
                 ->exists();
 
             if ($existingEnrollment) {

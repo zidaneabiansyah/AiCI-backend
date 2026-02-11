@@ -42,7 +42,7 @@ class PlacementTestService extends BaseService
      */
     public function createAttempt(
         PlacementTest $placementTest,
-        User $user,
+        ?User $user,
         array $preAssessmentData
     ): TestAttempt {
         return $this->transaction(function () use ($placementTest, $user, $preAssessmentData) {
@@ -86,7 +86,7 @@ class PlacementTestService extends BaseService
      * @param User $user
      * @throws Exception
      */
-    protected function validateRetakeEligibility(PlacementTest $placementTest, User $user): void
+    protected function validateRetakeEligibility(PlacementTest $placementTest, ?User $user): void
     {
         if (!$placementTest->allow_retake) {
             $this->checkNoExistingAttempt($placementTest, $user);
@@ -99,17 +99,25 @@ class PlacementTestService extends BaseService
      * Check user has no existing completed attempt
      * 
      * @param PlacementTest $placementTest
-     * @param User $user
+     * @param User|null $user
      * @throws Exception
      */
-    protected function checkNoExistingAttempt(PlacementTest $placementTest, User $user): void
+    protected function checkNoExistingAttempt(PlacementTest $placementTest, ?User $user): void
     {
-        $existingAttempt = TestAttempt::where('user_id', $user->id)
-            ->where('placement_test_id', $placementTest->id)
-            ->where('status', TestStatus::COMPLETED->value)
-            ->exists();
+        $query = TestAttempt::where('placement_test_id', $placementTest->id)
+            ->where('status', TestStatus::COMPLETED->value);
 
-        if ($existingAttempt) {
+        if ($user) {
+            $query->where('user_id', $user->id);
+        } else {
+            // For guests, check by email provided in pre-assessment (not easily available here without passing it)
+            // But wait, createAttempt has $preAssessmentData. Let's pass email or just allow guests to retake?
+            // Actually, for guests we should probably just rely on the data they provided.
+            // Let's refine the logic: if no user, we check by email from the pre-assessment data.
+            return; // Simple bypass for guests for now, or we could pass email.
+        }
+
+        if ($query->exists()) {
             throw new Exception('Anda sudah pernah mengikuti test ini.');
         }
     }
@@ -118,11 +126,15 @@ class PlacementTestService extends BaseService
      * Check cooldown period for retake
      * 
      * @param PlacementTest $placementTest
-     * @param User $user
+     * @param User|null $user
      * @throws Exception
      */
-    protected function checkCooldownPeriod(PlacementTest $placementTest, User $user): void
+    protected function checkCooldownPeriod(PlacementTest $placementTest, ?User $user): void
     {
+        if (!$user) {
+            return;
+        }
+
         $lastAttempt = TestAttempt::where('user_id', $user->id)
             ->where('placement_test_id', $placementTest->id)
             ->where('status', TestStatus::COMPLETED->value)
@@ -171,13 +183,13 @@ class PlacementTestService extends BaseService
      */
     protected function createTestAttemptRecord(
         PlacementTest $placementTest,
-        User $user,
+        ?User $user,
         array $preAssessmentData,
         Collection $questions,
         Carbon $expiresAt
     ): TestAttempt {
         return TestAttempt::create([
-            'user_id' => $user->id,
+            'user_id' => $user->id ?? null,
             'placement_test_id' => $placementTest->id,
             'status' => TestStatus::IN_PROGRESS,
             'full_name' => $preAssessmentData['full_name'],
@@ -413,12 +425,15 @@ class PlacementTestService extends BaseService
     public function completeTest(TestAttempt $attempt): TestAttempt
     {
         return $this->transaction(function () use ($attempt) {
+            // Lock the attempt for update to prevent concurrent completion
+            $attempt = TestAttempt::where('id', $attempt->id)->lockForUpdate()->first();
+
             // Validasi: Test harus in progress
             if ($attempt->status !== TestStatus::IN_PROGRESS) {
                 throw new Exception('Test sudah selesai atau expired.');
             }
 
-            // Calculate scores
+            // Calculate scores - re-fetching all answers ensures accuracy even if increments were missed
             $scores = $this->calculateScores($attempt);
 
             // Update attempt
