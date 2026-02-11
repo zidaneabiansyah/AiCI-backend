@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\BaseController;
 use App\Http\Resources\ProgramResource;
 use App\Models\Program;
 use Illuminate\Http\Request;
@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
  * Public API untuk mobile app
  * Endpoints untuk list dan detail program
  */
-class ProgramController extends Controller
+class ProgramController extends BaseController
 {
     /**
      * Display a listing of programs
@@ -51,7 +51,10 @@ class ProgramController extends Controller
             ->orderBy('name')
             ->get();
 
-        return ProgramResource::collection($programs);
+        return $this->successResponse(
+            ProgramResource::collection($programs),
+            'Programs retrieved successfully'
+        );
     }
 
     /**
@@ -71,6 +74,9 @@ class ProgramController extends Controller
             ])
             ->firstOrFail();
 
-        return new ProgramResource($program);
+        return $this->successResponse(
+            new ProgramResource($program),
+            'Program details retrieved successfully'
+        );
     }
 }

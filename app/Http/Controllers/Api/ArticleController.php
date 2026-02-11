@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\BaseController;
 use App\Http\Resources\ArticleResource;
 use App\Models\Article;
 use Illuminate\Http\Request;
@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
  * 
  * Public API untuk mobile app
  */
-class ArticleController extends Controller
+class ArticleController extends BaseController
 {
     /**
      * Display a listing of articles
@@ -47,7 +47,10 @@ class ArticleController extends Controller
         $articles = $query->latest('published_at')
             ->paginate($perPage);
 
-        return ArticleResource::collection($articles);
+        return $this->successResponse(
+            ArticleResource::collection($articles)->response()->getData(true),
+            'Articles retrieved successfully'
+        );
     }
 
     /**
@@ -64,6 +67,9 @@ class ArticleController extends Controller
         // Increment views
         $article->increment('views_count');
 
-        return new ArticleResource($article);
+        return $this->successResponse(
+            new ArticleResource($article),
+            'Article details retrieved successfully'
+        );
     }
 }

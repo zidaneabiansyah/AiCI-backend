@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\BaseController;
 use App\Http\Resources\EnrollmentResource;
 use Illuminate\Http\Request;
 
@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
  * Authenticated API untuk mobile app
  * User dapat melihat enrollment mereka sendiri
  */
-class UserEnrollmentController extends Controller
+class UserEnrollmentController extends BaseController
 {
     /**
      * Display user's enrollments
@@ -42,7 +42,10 @@ class UserEnrollmentController extends Controller
 
         $enrollments = $query->latest('enrolled_at')->get();
 
-        return EnrollmentResource::collection($enrollments);
+        return $this->successResponse(
+            EnrollmentResource::collection($enrollments),
+            'User enrollments retrieved successfully'
+        );
     }
 
     /**
@@ -57,6 +60,9 @@ class UserEnrollmentController extends Controller
             ->with(['class.program', 'classSchedule', 'payment'])
             ->findOrFail($id);
 
-        return new EnrollmentResource($enrollment);
+        return $this->successResponse(
+            new EnrollmentResource($enrollment),
+            'Enrollment details retrieved successfully'
+        );
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\BaseController;
 use App\Http\Resources\ClassResource;
 use App\Models\ClassModel;
 use Illuminate\Http\Request;
@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
  * Public API untuk mobile app
  * Endpoints untuk list dan detail kelas
  */
-class ClassController extends Controller
+class ClassController extends BaseController
 {
     /**
      * Display a listing of classes
@@ -57,7 +57,10 @@ class ClassController extends Controller
             ->orderBy('name')
             ->get();
 
-        return ClassResource::collection($classes);
+        return $this->successResponse(
+            ClassResource::collection($classes),
+            'Classes retrieved successfully'
+        );
     }
 
     /**
@@ -76,6 +79,9 @@ class ClassController extends Controller
             ])
             ->firstOrFail();
 
-        return new ClassResource($class);
+        return $this->successResponse(
+            new ClassResource($class),
+            'Class details retrieved successfully'
+        );
     }
 }

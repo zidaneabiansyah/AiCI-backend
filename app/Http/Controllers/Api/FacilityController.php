@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\BaseController;
 use App\Http\Resources\FacilityResource;
 use App\Models\Facility;
 use Illuminate\Http\Request;
 
-class FacilityController extends Controller
+class FacilityController extends BaseController
 {
     /**
      * Display a listing of facilities
@@ -20,7 +20,10 @@ class FacilityController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return FacilityResource::collection($facilities);
+        return $this->successResponse(
+            FacilityResource::collection($facilities),
+            'Facilities retrieved successfully'
+        );
     }
 
     /**
@@ -30,6 +33,9 @@ class FacilityController extends Controller
      */
     public function show(Facility $facility)
     {
-        return new FacilityResource($facility);
+        return $this->successResponse(
+            new FacilityResource($facility),
+            'Facility details retrieved successfully'
+        );
     }
 }

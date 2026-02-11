@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\BaseController;
 use App\Http\Resources\GalleryResource;
 use App\Models\Gallery;
 use Illuminate\Http\Request;
 
-class GalleryController extends Controller
+class GalleryController extends BaseController
 {
     /**
      * Display a listing of gallery items
@@ -32,7 +32,10 @@ class GalleryController extends Controller
             ->latest()
             ->paginate($perPage);
 
-        return GalleryResource::collection($galleries);
+        return $this->successResponse(
+            GalleryResource::collection($galleries)->response()->getData(true),
+            'Galleries retrieved successfully'
+        );
     }
 
     /**
@@ -42,6 +45,9 @@ class GalleryController extends Controller
      */
     public function show(Gallery $gallery)
     {
-        return new GalleryResource($gallery);
+        return $this->successResponse(
+            new GalleryResource($gallery),
+            'Gallery item details retrieved successfully'
+        );
     }
 }
