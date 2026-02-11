@@ -101,4 +101,21 @@ Route::post('/webhooks/xendit', [App\Http\Controllers\WebhookController::class, 
     ->name('webhooks.xendit')
     ->middleware('throttle:100,1'); // 100 requests per 1 minute
 
+// Admin Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index']);
+    Route::resource('programs', App\Http\Controllers\Admin\ProgramController::class);
+    Route::resource('classes', App\Http\Controllers\Admin\ClassController::class);
+    Route::resource('questions', App\Http\Controllers\Admin\QuestionController::class);
+    Route::resource('enrollments', App\Http\Controllers\Admin\EnrollmentController::class);
+    Route::post('enrollments/{enrollment}/status', [App\Http\Controllers\Admin\EnrollmentController::class, 'updateStatus'])->name('enrollments.update-status');
+
+    Route::prefix('content')->name('content.')->group(function () {
+        Route::get('articles', [App\Http\Controllers\Admin\ContentController::class, 'articles'])->name('articles.index');
+        Route::get('gallery', [App\Http\Controllers\Admin\ContentController::class, 'gallery'])->name('gallery.index');
+        Route::get('facilities', [App\Http\Controllers\Admin\ContentController::class, 'facilities'])->name('facilities.index');
+    });
+});
+
 require __DIR__.'/auth.php';
