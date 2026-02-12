@@ -10,6 +10,7 @@ use App\Models\TestQuestion;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -662,12 +663,36 @@ class PlacementTestService extends BaseService
      * @param TestAttempt $attempt
      * @return int|null
      */
-    protected function getTimeRemaining(TestAttempt $attempt): ?int
+    /**
+     * Generate PDF for test result
+     * 
+     * @param TestAttempt $attempt
+     * @return \Barryvdh\DomPDF\PDF
+     * @throws Exception
+     */
+    public function generateResultPdf(TestAttempt $attempt)
     {
-        if (!$attempt->expires_at) {
-            return null;
+        $attempt->load(['result', 'placementTest']);
+
+        if (!$attempt->result) {
+            throw new Exception('Hasil test belum tersedia.');
         }
 
-        return max(0, now()->diffInSeconds($attempt->expires_at, false));
+        // Get recommended classes with models for the template
+        $recommendedClassModels = $attempt->result->getRecommendedClassModels();
+        
+        // Match recommendations with reasons
+        $recommendations = collect($attempt->result->recommended_classes)->map(function ($rec) use ($recommendedClassModels) {
+            return [
+                'class' => $recommendedClassModels->firstWhere('id', $rec['class_id']),
+                'match_percentage' => $rec['match_percentage'],
+                'reason' => $rec['reason'],
+            ];
+        })->filter(fn($rec) => $rec['class'] !== null);
+
+        return Pdf::loadView('pdf.test-result', [
+            'attempt' => $attempt,
+            'recommendations' => $recommendations,
+        ]);
     }
 }

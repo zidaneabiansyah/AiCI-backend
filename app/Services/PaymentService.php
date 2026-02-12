@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentException;
 use App\Models\Enrollment;
 use App\Models\Payment;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -510,30 +511,80 @@ class PaymentService extends BaseService
     }
 
     /**
-     * Generate payment receipt (simple text receipt)
-     * 
-     * TODO: Implement PDF generation dengan library seperti DomPDF
+     * Generate PDF receipt
      * 
      * @param Payment $payment
-     * @return array
+     * @return \Barryvdh\DomPDF\PDF
+     * @throws PaymentException
      */
-    public function generateReceipt(Payment $payment): array
+    public function generateReceiptPdf(Payment $payment)
     {
         if ($payment->status !== PaymentStatus::PAID) {
             throw new PaymentException('Hanya payment yang sudah dibayar yang dapat generate receipt.');
         }
 
-        return [
-            'invoice_number' => $payment->invoice_number,
-            'payment_date' => $payment->paid_at->format('d F Y H:i'),
-            'student_name' => $payment->enrollment->student_name,
-            'class_name' => $payment->enrollment->class->name,
-            'amount' => formatCurrency($payment->amount),
-            'admin_fee' => formatCurrency($payment->admin_fee),
-            'total_amount' => formatCurrency($payment->total_amount),
-            'payment_method' => $payment->payment_method,
-            'status' => 'LUNAS',
-        ];
+        $payment->load(['enrollment.class', 'user']);
+
+        return Pdf::loadView('pdf.receipt', [
+            'payment' => $payment,
+        ]);
+    }
+
+    /**
+     * Process refund via Xendit
+     * 
+     * @param Payment $payment
+     * @param string $reason
+     * @param float|null $amount
+     * @return Payment
+     * @throws PaymentException
+     */
+    public function processRefund(Payment $payment, string $reason, ?float $amount = null): Payment
+    {
+        if ($payment->status !== PaymentStatus::PAID) {
+            throw new PaymentException('Hanya payment yang sudah lunas yang dapat direfund.');
+        }
+
+        $refundAmount = $amount ?? $payment->amount;
+
+        try {
+            // Call Xendit Refund API
+            // Note: In v2 invoices, refunds are handled through a specific endpoint
+            $response = Http::withBasicAuth($this->xenditSecretKey, '')
+                ->post($this->xenditApiUrl . '/v2/invoices/' . $payment->xendit_invoice_id . '/refunds', [
+                    'amount' => $refundAmount,
+                    'reason' => $reason,
+                ]);
+
+            if (!$response->successful()) {
+                $errorData = $response->json();
+                throw new Exception($errorData['message'] ?? 'Xendit Refund API failed');
+            }
+
+            // Update payment record
+            $payment->update([
+                'status' => PaymentStatus::REFUNDED,
+                'refunded_at' => now(),
+                'refund_amount' => $refundAmount,
+                'refund_reason' => $reason,
+            ]);
+
+            $this->log('Refund processed successfully', [
+                'payment_id' => $payment->id,
+                'amount' => $refundAmount,
+                'xendit_invoice_id' => $payment->xendit_invoice_id,
+            ]);
+
+            return $payment->fresh();
+
+        } catch (Exception $e) {
+            $this->log('Failed to process refund', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ], 'error');
+
+            throw new PaymentException('Gagal memproses refund: ' . $e->getMessage());
+        }
     }
 
     /**

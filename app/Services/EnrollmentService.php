@@ -298,10 +298,13 @@ class EnrollmentService extends BaseService
 
             // Handle refund if payment exists and is paid
             if ($enrollment->payment && $enrollment->payment->isPaid()) {
-                // TODO: Implement refund logic
-                $this->log('Refund required', [
+                $paymentService = app(PaymentService::class);
+                $paymentService->processRefund($enrollment->payment, "Pembatalan Enrollment: {$reason}");
+                
+                $this->log('Refund processed automatically during cancellation', [
                     'enrollment_id' => $enrollment->id,
                     'payment_id' => $enrollment->payment->id,
+                    'amount' => $enrollment->payment->refund_amount,
                 ]);
             }
 
