@@ -98,7 +98,7 @@ class PaymentController extends BaseController
                 'student_name' => $payment->enrollment->student_name,
                 'student_email' => $payment->enrollment->student_email,
             ],
-            'class' => [
+            'courseClass' => [
                 'name' => $payment->enrollment->class->name,
                 'code' => $payment->enrollment->class->code,
                 'program_name' => $payment->enrollment->class->program->name,
