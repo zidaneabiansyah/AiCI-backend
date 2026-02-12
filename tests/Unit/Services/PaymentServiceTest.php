@@ -261,10 +261,7 @@ test('it can generate receipt', function () {
         'paid_at' => now(),
     ]);
 
-    $receipt = $this->paymentService->generateReceipt($payment);
+    $receipt = $this->paymentService->generateReceiptPdf($payment);
 
-    expect($receipt)->toBeArray()
-        ->and($receipt['invoice_number'])->toBe($payment->invoice_number)
-        ->and($receipt['status'])->toBe('LUNAS')
-        ->and($receipt['total_amount'])->toContain('1.025.000');
+    expect($receipt)->toBeInstanceOf(\Barryvdh\DomPDF\PDF::class);
 });

@@ -11,17 +11,10 @@ use App\Models\Enrollment;
 use App\Services\EnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use Inertia\Inertia;
+use Illuminate\Http\JsonResponse;
 
 /**
- * Controller untuk Enrollment
- * 
- * Endpoints:
- * - GET /enrollments - List user's enrollments
- * - GET /enrollments/create/{class} - Show enrollment form
- * - POST /enrollments - Create enrollment
- * - GET /enrollments/{enrollment} - Show enrollment detail
- * - POST /enrollments/{enrollment}/cancel - Cancel enrollment
+ * Controller untuk Enrollment (API Version)
  */
 class EnrollmentController extends BaseController
 {
@@ -36,9 +29,9 @@ class EnrollmentController extends BaseController
      * Display user's enrollments
      * 
      * @param Request $request
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $status = $request->get('status');
         
@@ -47,56 +40,51 @@ class EnrollmentController extends BaseController
             $status
         );
 
-        return Inertia::render('Enrollments/Index', [
-            'enrollments' => $enrollments->map(function ($enrollment) {
-                return [
-                    'id' => $enrollment->id,
-                    'enrollment_number' => $enrollment->enrollment_number,
-                    'status' => $enrollment->status->value,
-                    'status_label' => $enrollment->status->label(),
-                    'student_name' => $enrollment->student_name,
-                    'enrolled_at' => $enrollment->enrolled_at,
-                    'enrolled_at_formatted' => formatDateTime($enrollment->enrolled_at),
-                    'class' => [
-                        'id' => $enrollment->class->id,
-                        'name' => $enrollment->class->name,
-                        'slug' => $enrollment->class->slug,
-                        'level' => $enrollment->class->level,
-                        'price' => $enrollment->class->price,
-                        'price_formatted' => formatCurrency($enrollment->class->price),
-                        'program_name' => $enrollment->class->program->name,
-                    ],
-                    'schedule' => $enrollment->schedule ? [
-                        'batch_name' => $enrollment->schedule->batch_name,
-                        'start_date' => formatDate($enrollment->schedule->start_date),
-                    ] : null,
-                    'payment' => $enrollment->payment ? [
-                        'status' => $enrollment->payment->status->value,
-                        'status_label' => $enrollment->payment->status->label(),
-                        'total_amount' => $enrollment->payment->total_amount,
-                        'total_amount_formatted' => formatCurrency($enrollment->payment->total_amount),
-                    ] : null,
-                ];
-            }),
-            'filters' => $request->only(['status']),
-        ]);
+        return $this->successResponse($enrollments->map(function ($enrollment) {
+            return [
+                'id' => $enrollment->id,
+                'enrollment_number' => $enrollment->enrollment_number,
+                'status' => $enrollment->status->value,
+                'status_label' => $enrollment->status->label(),
+                'student_name' => $enrollment->student_name,
+                'enrolled_at' => $enrollment->enrolled_at,
+                'enrolled_at_formatted' => formatDateTime($enrollment->enrolled_at),
+                'class' => [
+                    'id' => $enrollment->class->id,
+                    'name' => $enrollment->class->name,
+                    'slug' => $enrollment->class->slug,
+                    'level' => $enrollment->class->level,
+                    'price' => $enrollment->class->price,
+                    'price_formatted' => formatCurrency($enrollment->class->price),
+                    'program_name' => $enrollment->class->program->name,
+                ],
+                'schedule' => $enrollment->schedule ? [
+                    'batch_name' => $enrollment->schedule->batch_name,
+                    'start_date' => formatDate($enrollment->schedule->start_date),
+                ] : null,
+                'payment' => $enrollment->payment ? [
+                    'status' => $enrollment->payment->status->value,
+                    'status_label' => $enrollment->payment->status->label(),
+                    'total_amount' => $enrollment->payment->total_amount,
+                    'total_amount_formatted' => formatCurrency($enrollment->payment->total_amount),
+                ] : null,
+            ];
+        }), 'User enrollments retrieved successfully');
     }
 
     /**
-     * Show enrollment form
+     * Show enrollment form data
      * 
      * @param ClassModel $class
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function create(ClassModel $class)
+    public function create(ClassModel $class): JsonResponse
     {
         // Check if user can enroll
         $canEnroll = $this->enrollmentService->canEnroll(auth()->user(), $class);
         
         if (!$canEnroll['can_enroll']) {
-            return redirect()
-                ->route('classes.show', $class)
-                ->with('error', $canEnroll['reason']);
+            return $this->errorResponse($canEnroll['reason']);
         }
 
         // Load schedules
@@ -116,7 +104,7 @@ class EnrollmentController extends BaseController
             ->first()
             ?->result;
 
-        return Inertia::render('Enrollments/Create', [
+        return $this->successResponse([
             'class' => [
                 'id' => $class->id,
                 'name' => $class->name,
@@ -150,16 +138,16 @@ class EnrollmentController extends BaseController
                 'name' => auth()->user()->name,
                 'email' => auth()->user()->email,
             ],
-        ]);
+        ], 'Enrollment form data retrieved');
     }
 
     /**
      * Store enrollment
      * 
      * @param CreateEnrollmentRequest $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return JsonResponse
      */
-    public function store(CreateEnrollmentRequest $request)
+    public function store(CreateEnrollmentRequest $request): JsonResponse
     {
         try {
             $class = ClassModel::findOrFail($request->class_id);
@@ -174,14 +162,12 @@ class EnrollmentController extends BaseController
             Mail::to($enrollment->student_email)
                 ->send(new EnrollmentCreated($enrollment));
 
-            return $this->redirectWithSuccess(
-                'enrollments.show',
-                'Pendaftaran berhasil! Silakan lakukan pembayaran.',
-                ['enrollment' => $enrollment->id]
-            );
+            return $this->successResponse([
+                'enrollment_id' => $enrollment->id
+            ], 'Pendaftaran berhasil!');
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -189,19 +175,19 @@ class EnrollmentController extends BaseController
      * Show enrollment detail
      * 
      * @param Enrollment $enrollment
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function show(Enrollment $enrollment)
+    public function show(Enrollment $enrollment): JsonResponse
     {
         // Authorization: Only owner can view
         if ($enrollment->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to enrollment.');
+            return $this->errorResponse('Unauthorized access to enrollment.', null, 403);
         }
 
         // Load relationships
         $enrollment->load(['class.program', 'schedule', 'payment']);
 
-        return Inertia::render('Enrollments/Show', [
+        return $this->successResponse([
             'enrollment' => [
                 'id' => $enrollment->id,
                 'enrollment_number' => $enrollment->enrollment_number,
@@ -254,7 +240,7 @@ class EnrollmentController extends BaseController
                 'xendit_invoice_url' => $enrollment->payment->xendit_invoice_url,
                 'expired_at' => $enrollment->payment->expired_at ? formatDateTime($enrollment->payment->expired_at) : null,
             ] : null,
-        ]);
+        ], 'Enrollment details retrieved');
     }
 
     /**
@@ -262,13 +248,13 @@ class EnrollmentController extends BaseController
      * 
      * @param CancelEnrollmentRequest $request
      * @param Enrollment $enrollment
-     * @return \Illuminate\Http\RedirectResponse
+     * @return JsonResponse
      */
-    public function cancel(CancelEnrollmentRequest $request, Enrollment $enrollment)
+    public function cancel(CancelEnrollmentRequest $request, Enrollment $enrollment): JsonResponse
     {
         // Authorization: Only owner can cancel
         if ($enrollment->user_id !== auth()->id()) {
-            abort(403);
+            return $this->errorResponse('Unauthorized', null, 403);
         }
 
         try {
@@ -281,14 +267,10 @@ class EnrollmentController extends BaseController
             Mail::to($enrollment->student_email)
                 ->send(new EnrollmentCancelled($enrollment, $request->cancellation_reason));
 
-            return $this->redirectWithSuccess(
-                'enrollments.show',
-                'Pendaftaran berhasil dibatalkan.',
-                ['enrollment' => $enrollment->id]
-            );
+            return $this->successResponse(null, 'Pendaftaran berhasil dibatalkan.');
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 }

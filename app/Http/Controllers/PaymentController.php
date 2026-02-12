@@ -6,18 +6,11 @@ use App\Models\Enrollment;
 use App\Models\Payment;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 
 /**
- * Controller untuk Payment
- * 
- * Endpoints:
- * - POST /payments/create/{enrollment} - Create payment & Xendit invoice
- * - GET /payments/{payment} - Show payment detail
- * - GET /payments/{payment}/check - Manual check payment status
- * - GET /payments/success/{payment} - Payment success redirect
- * - GET /payments/failed/{payment} - Payment failed redirect
- * - GET /payments/{payment}/receipt - Download receipt
+ * Controller untuk Payment (API Version)
  */
 class PaymentController extends BaseController
 {
@@ -32,26 +25,25 @@ class PaymentController extends BaseController
      * Create payment for enrollment
      * 
      * @param Enrollment $enrollment
-     * @return \Illuminate\Http\RedirectResponse
+     * @return JsonResponse
      */
-    public function create(Enrollment $enrollment)
+    public function create(Enrollment $enrollment): JsonResponse
     {
         // Authorization: Only owner can create payment
         if ($enrollment->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to enrollment.');
+            return $this->errorResponse('Unauthorized access to enrollment.', null, 403);
         }
 
         try {
             $payment = $this->paymentService->createPayment($enrollment);
 
-            return $this->redirectWithSuccess(
-                'payments.show',
-                'Invoice pembayaran berhasil dibuat. Silakan lakukan pembayaran.',
-                ['payment' => $payment->id]
-            );
+            return $this->successResponse([
+                'payment_id' => $payment->id,
+                'xendit_invoice_url' => $payment->xendit_invoice_url
+            ], 'Invoice pembayaran berhasil dibuat.');
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -59,19 +51,19 @@ class PaymentController extends BaseController
      * Show payment detail & invoice
      * 
      * @param Payment $payment
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function show(Payment $payment)
+    public function show(Payment $payment): JsonResponse
     {
         // Authorization: Only owner can view
         if ($payment->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to payment.');
+            return $this->errorResponse('Unauthorized access to payment.', null, 403);
         }
 
         // Load relationships
         $payment->load(['enrollment.class.program', 'enrollment.schedule']);
 
-        return Inertia::render('Payments/Show', [
+        return $this->successResponse([
             'payment' => [
                 'id' => $payment->id,
                 'invoice_number' => $payment->invoice_number,
@@ -107,43 +99,32 @@ class PaymentController extends BaseController
                 'batch_name' => $payment->enrollment->schedule->batch_name,
                 'start_date' => formatDate($payment->enrollment->schedule->start_date),
             ] : null,
-        ]);
+        ], 'Payment details retrieved');
     }
 
     /**
      * Manual check payment status
      * 
-     * User dapat click "Check Status" untuk sync dengan Xendit
-     * 
      * @param Payment $payment
-     * @return \Illuminate\Http\RedirectResponse
+     * @return JsonResponse
      */
-    public function checkStatus(Payment $payment)
+    public function checkStatus(Payment $payment): JsonResponse
     {
         // Authorization
         if ($payment->user_id !== auth()->id()) {
-            abort(403);
+            return $this->errorResponse('Unauthorized', null, 403);
         }
 
         try {
             $payment = $this->paymentService->checkPaymentStatus($payment);
 
-            if ($payment->status->value === 'paid') {
-                return $this->redirectWithSuccess(
-                    'payments.show',
-                    'Pembayaran berhasil! Terima kasih.',
-                    ['payment' => $payment->id]
-                );
-            }
-            
-            return $this->redirectWithSuccess(
-                'payments.show',
-                'Status pembayaran: ' . $payment->status->label(),
-                ['payment' => $payment->id]
-            );
+            return $this->successResponse([
+                'status' => $payment->status->value,
+                'status_label' => $payment->status->label()
+            ], 'Status pembayaran diperbarui.');
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -151,57 +132,52 @@ class PaymentController extends BaseController
      * Payment success redirect (dari Xendit)
      * 
      * @param Payment $payment
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
-    public function success(Payment $payment)
+    public function success(Payment $payment): RedirectResponse
     {
         // Check payment status
         try {
             $payment = $this->paymentService->checkPaymentStatus($payment);
         } catch (\Exception $e) {
-            // Log error but continue to show success page
             \Illuminate\Support\Facades\Log::warning('Failed to check payment status on success page', [
                 'payment_id' => $payment->id,
                 'error' => $e->getMessage(),
             ]);
         }
 
-        return redirect()
-            ->route('payments.show', $payment)
-            ->with('success', 'Pembayaran berhasil! Terima kasih.');
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+        return redirect()->away("{$frontendUrl}/payments/success?payment_id={$payment->id}");
     }
 
     /**
      * Payment failed redirect (dari Xendit)
      * 
      * @param Payment $payment
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
-    public function failed(Payment $payment)
+    public function failed(Payment $payment): RedirectResponse
     {
-        return redirect()
-            ->route('payments.show', $payment)
-            ->with('error', 'Pembayaran gagal atau dibatalkan. Silakan coba lagi.');
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+        return redirect()->away("{$frontendUrl}/payments/failed?payment_id={$payment->id}");
     }
 
     /**
      * Download payment receipt PDF
      * 
      * @param Payment $payment
-     * @return \Illuminate\Http\Response
+     * @return mixed
      */
-    public function receipt(Payment $payment)
+    public function receipt(Payment $payment): mixed
     {
         // Authorization
         if ($payment->user_id !== auth()->id()) {
-            abort(403);
+            return $this->errorResponse('Unauthorized', null, 403);
         }
 
         // Validate: Payment harus paid
         if ($payment->status->value !== 'paid') {
-            return redirect()
-                ->route('payments.show', $payment)
-                ->with('error', 'Receipt hanya tersedia untuk pembayaran yang sudah lunas.');
+            return $this->errorResponse('Receipt hanya tersedia untuk pembayaran yang sudah lunas.');
         }
 
         try {
@@ -210,7 +186,7 @@ class PaymentController extends BaseController
             return $pdf->download("receipt-{$payment->invoice_number}.pdf");
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 }

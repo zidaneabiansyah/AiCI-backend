@@ -11,19 +11,10 @@ use App\Models\TestQuestion;
 use App\Services\PlacementTestService;
 use App\Services\RecommendationService;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Http\JsonResponse;
 
 /**
- * Controller untuk Placement Test
- * 
- * Endpoints:
- * - GET /placement-test - List available tests
- * - GET /placement-test/{test} - Show test info & pre-assessment form
- * - POST /placement-test/{test}/start - Start test (create attempt)
- * - GET /placement-test/attempt/{attempt} - Show test questions
- * - POST /placement-test/attempt/{attempt}/answer - Submit answer
- * - POST /placement-test/attempt/{attempt}/complete - Complete test
- * - GET /placement-test/result/{attempt} - Show test result
+ * Controller untuk Placement Test (API Version)
  */
 class PlacementTestController extends BaseController
 {
@@ -38,9 +29,9 @@ class PlacementTestController extends BaseController
     /**
      * Display list of available placement tests
      * 
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function index()
+    public function index(): JsonResponse
     {
         $tests = PlacementTest::active()
             ->orderBy('education_level')
@@ -57,18 +48,16 @@ class PlacementTestController extends BaseController
                 ];
             });
 
-        return Inertia::render('PlacementTest/Index', [
-            'tests' => $tests,
-        ]);
+        return $this->successResponse($tests, 'Available placement tests retrieved');
     }
 
     /**
      * Show test info and pre-assessment form
      * 
      * @param PlacementTest $test
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function show(PlacementTest $test)
+    public function show(PlacementTest $test): JsonResponse
     {
         // Check if user already has completed attempt
         $existingAttempt = null;
@@ -80,7 +69,7 @@ class PlacementTestController extends BaseController
                 ->first();
         }
 
-        return Inertia::render('PlacementTest/Show', [
+        return $this->successResponse([
             'test' => [
                 'id' => $test->id,
                 'title' => $test->title,
@@ -98,22 +87,17 @@ class PlacementTestController extends BaseController
                 'level_result' => $existingAttempt->level_result,
                 'completed_at' => $existingAttempt->completed_at,
             ] : null,
-        ]);
+        ], 'Placement test details retrieved');
     }
 
     /**
      * Start placement test (create test attempt)
      * 
-     * Flow:
-     * 1. Validate pre-assessment data
-     * 2. Create test attempt
-     * 3. Redirect to test page
-     * 
      * @param StartTestRequest $request
      * @param PlacementTest $test
-     * @return \Illuminate\Http\RedirectResponse
+     * @return JsonResponse
      */
-    public function start(StartTestRequest $request, PlacementTest $test)
+    public function start(StartTestRequest $request, PlacementTest $test): JsonResponse
     {
         try {
             $user = auth()->user();
@@ -124,47 +108,46 @@ class PlacementTestController extends BaseController
                 $request->validated()
             );
 
-            return $this->redirectWithSuccess(
-                'placement-test.attempt',
-                'Test dimulai! Selamat mengerjakan.',
-                ['attempt' => $attempt->id]
-            );
+            return $this->successResponse([
+                'attempt_id' => $attempt->id
+            ], 'Test started successfully');
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 
     /**
-     * Show test questions page
+     * Show test questions
      * 
      * @param TestAttempt $attempt
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function attempt(TestAttempt $attempt)
+    public function attempt(TestAttempt $attempt): JsonResponse
     {
         // Authorization: Only owner can access
         if ($attempt->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to test attempt.');
+            return $this->errorResponse('Unauthorized access to test attempt.', null, 403);
         }
 
         // Check if already completed
         if ($attempt->status->value === 'completed') {
-            return redirect()->route('placement-test.result', $attempt);
+            return $this->successResponse([
+                'status' => 'completed',
+                'redirect_to_result' => true
+            ], 'Test already completed');
         }
 
         // Check if expired
         if ($attempt->isExpired()) {
             $attempt->updateStatus('expired');
-            return redirect()
-                ->route('placement-test.show', $attempt->placementTest)
-                ->with('error', 'Waktu test telah habis.');
+            return $this->errorResponse('Waktu test telah habis.', ['status' => 'expired']);
         }
 
         // Get test data
         $testData = $this->testService->getTestData($attempt);
 
-        return Inertia::render('PlacementTest/Attempt', [
+        return $this->successResponse([
             'attempt' => [
                 'id' => $attempt->id,
                 'status' => $attempt->status->value,
@@ -178,7 +161,7 @@ class PlacementTestController extends BaseController
             'questions' => $testData['questions'],
             'progress' => $testData['progress'],
             'timeRemaining' => $testData['time_remaining'],
-        ]);
+        ], 'Test questions retrieved');
     }
 
     /**
@@ -186,9 +169,9 @@ class PlacementTestController extends BaseController
      * 
      * @param SubmitAnswerRequest $request
      * @param TestAttempt $attempt
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
-    public function submitAnswer(SubmitAnswerRequest $request, TestAttempt $attempt)
+    public function submitAnswer(SubmitAnswerRequest $request, TestAttempt $attempt): JsonResponse
     {
         // Authorization
         if ($attempt->user_id !== auth()->id()) {
@@ -231,13 +214,13 @@ class PlacementTestController extends BaseController
      * 
      * @param CompleteTestRequest $request
      * @param TestAttempt $attempt
-     * @return \Illuminate\Http\RedirectResponse
+     * @return JsonResponse
      */
-    public function complete(CompleteTestRequest $request, TestAttempt $attempt)
+    public function complete(CompleteTestRequest $request, TestAttempt $attempt): JsonResponse
     {
         // Authorization
         if ($attempt->user_id !== auth()->id()) {
-            abort(403);
+            return $this->errorResponse('Unauthorized', null, 403);
         }
 
         try {
@@ -247,14 +230,12 @@ class PlacementTestController extends BaseController
             // Generate recommendations
             $this->recommendationService->generateRecommendations($attempt);
 
-            return $this->redirectWithSuccess(
-                'placement-test.result',
-                'Test selesai! Lihat hasil dan rekomendasi kelas Anda.',
-                ['attempt' => $attempt->id]
-            );
+            return $this->successResponse([
+                'attempt_id' => $attempt->id
+            ], 'Test completed successfully');
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -262,22 +243,20 @@ class PlacementTestController extends BaseController
      * Show test result and recommendations
      * 
      * @param TestAttempt $attempt
-     * @return \Inertia\Response
+     * @return JsonResponse
      */
-    public function result(TestAttempt $attempt)
+    public function result(TestAttempt $attempt): JsonResponse
     {
         // Authorization
         if ($attempt->user_id !== auth()->id()) {
-            abort(403);
+            return $this->errorResponse('Unauthorized', null, 403);
         }
 
         // Load relationships
         $attempt->load(['result', 'placementTest']);
 
         if (!$attempt->result) {
-            return redirect()
-                ->route('placement-test.show', $attempt->placementTest)
-                ->with('error', 'Hasil test belum tersedia.');
+            return $this->errorResponse('Hasil test belum tersedia.');
         }
 
         $result = $attempt->result;
@@ -285,7 +264,7 @@ class PlacementTestController extends BaseController
         // Get recommended classes
         $recommendedClasses = $result->getRecommendedClassModels();
 
-        return Inertia::render('PlacementTest/Result', [
+        return $this->successResponse([
             'attempt' => [
                 'id' => $attempt->id,
                 'score' => $attempt->score,
@@ -318,20 +297,20 @@ class PlacementTestController extends BaseController
                     'program_name' => $class->program->name,
                 ];
             }),
-        ]);
+        ], 'Test result retrieved successfully');
     }
 
     /**
      * Download test result PDF
      * 
      * @param TestAttempt $attempt
-     * @return \Illuminate\Http\Response
+     * @return mixed
      */
-    public function downloadResult(TestAttempt $attempt)
+    public function downloadResult(TestAttempt $attempt): mixed
     {
         // Authorization
         if ($attempt->user_id !== auth()->id()) {
-            abort(403);
+            return $this->errorResponse('Unauthorized', null, 403);
         }
 
         try {
@@ -340,7 +319,7 @@ class PlacementTestController extends BaseController
             return $pdf->download("test-result-{$attempt->id}.pdf");
 
         } catch (\Exception $e) {
-            return $this->backWithError($e->getMessage());
+            return $this->errorResponse($e->getMessage());
         }
     }
 }
