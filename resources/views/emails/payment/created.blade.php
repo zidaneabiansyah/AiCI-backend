@@ -1,49 +1,80 @@
-<x-mail::message>
-# Invoice Pembayaran
+@extends('emails.layout', [
+    'headerTitle' => 'Invoice Pembayaran',
+    'headerSubtitle' => 'Silakan selesaikan pembayaran Anda'
+])
 
-Halo,
+@section('content')
+    <h2>Halo, {{ $payment->enrollment->student_name }}!</h2>
+    
+    <p>
+        Invoice pembayaran untuk pendaftaran kelas <strong>{{ $payment->enrollment->class->name }}</strong> 
+        telah dibuat. Silakan selesaikan pembayaran Anda untuk mengamankan tempat di kelas.
+    </p>
 
-Invoice pembayaran untuk pendaftaran Anda telah dibuat.
+    <div class="alert alert-warning">
+        <strong>⏰ Batas Waktu Pembayaran:</strong><br>
+        {{ $payment->expired_at_formatted }}<br>
+        <small>Invoice akan kadaluarsa jika pembayaran tidak diselesaikan sebelum batas waktu.</small>
+    </div>
 
-## Detail Invoice
+    <div class="info-box">
+        <h3>Detail Invoice</h3>
+        <div class="info-row">
+            <span class="info-label">Nomor Invoice</span>
+            <span class="info-value"><strong>{{ $payment->invoice_number }}</strong></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Tanggal Invoice</span>
+            <span class="info-value">{{ $payment->created_at_formatted }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value"><span style="color: #ffc107; font-weight: 600;">⏳ Menunggu Pembayaran</span></span>
+        </div>
+    </div>
 
-<x-mail::panel>
-**Nomor Invoice:** {{ $invoiceNumber }}  
-**Nomor Pendaftaran:** {{ $enrollment->enrollment_number }}  
-**Kelas:** {{ $class->name }}  
-**Total Pembayaran:** {{ formatCurrency($amount) }}
-</x-mail::panel>
+    <div class="info-box">
+        <h3>Rincian Pembayaran</h3>
+        <div class="info-row">
+            <span class="info-label">Kelas</span>
+            <span class="info-value">{{ $payment->enrollment->class->name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Biaya Kelas</span>
+            <span class="info-value">{{ $payment->amount_formatted }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Biaya Admin</span>
+            <span class="info-value">{{ $payment->admin_fee_formatted }}</span>
+        </div>
+        <div class="info-row" style="border-top: 2px solid #255d74; padding-top: 12px; margin-top: 8px;">
+            <span class="info-label"><strong>Total Pembayaran</strong></span>
+            <span class="info-value"><strong style="color: #ff4d30; font-size: 18px;">{{ $payment->total_amount_formatted }}</strong></span>
+        </div>
+    </div>
 
-## Batas Waktu Pembayaran
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{ $payment->xendit_invoice_url }}" class="button">
+            Bayar Sekarang
+        </a>
+    </div>
 
-<x-mail::panel>
-Invoice ini akan **kadaluarsa** pada:  
-**{{ formatDateTime($expiredAt) }}**
+    <div class="divider"></div>
 
-Mohon selesaikan pembayaran sebelum batas waktu.
-</x-mail::panel>
+    <h3 style="color: #255d74; font-size: 18px; margin-bottom: 15px;">Cara Pembayaran</h3>
+    <ol style="color: #555555; padding-left: 20px; line-height: 2;">
+        <li>Klik tombol "Bayar Sekarang" di atas</li>
+        <li>Pilih metode pembayaran yang Anda inginkan (Transfer Bank, E-Wallet, dll)</li>
+        <li>Ikuti instruksi pembayaran yang diberikan</li>
+        <li>Setelah pembayaran berhasil, Anda akan menerima konfirmasi via email</li>
+    </ol>
 
-## Cara Pembayaran
+    <div class="alert alert-info">
+        <strong>💳 Metode Pembayaran:</strong> Kami menerima pembayaran melalui Transfer Bank, 
+        E-Wallet (OVO, GoPay, Dana), dan Virtual Account.
+    </div>
 
-Klik tombol di bawah untuk melakukan pembayaran melalui berbagai metode:
-- Transfer Bank (BCA, Mandiri, BNI, BRI)
-- E-Wallet (OVO, GoPay, Dana, LinkAja)
-- QRIS
-- Kartu Kredit/Debit
-- Retail Outlet (Alfamart, Indomaret)
-
-<x-mail::button :url="$paymentUrl" color="success">
-Bayar Sekarang
-</x-mail::button>
-
-## Penting!
-
-- Pastikan Anda menyelesaikan pembayaran sebelum batas waktu
-- Setelah pembayaran berhasil, Anda akan menerima email konfirmasi
-- Simpan nomor invoice untuk referensi
-
-Jika ada pertanyaan, hubungi kami di support@aici-umg.ac.id
-
-Terima kasih,  
-**{{ config('app.name') }}**
-</x-mail::message>
+    <p style="color: #666666; font-size: 14px; margin-top: 30px;">
+        Jika Anda mengalami kesulitan dalam proses pembayaran, jangan ragu untuk menghubungi kami.
+    </p>
+@endsection

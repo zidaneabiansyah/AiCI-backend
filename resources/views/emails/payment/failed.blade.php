@@ -1,59 +1,77 @@
-<x-mail::message>
-# Pembayaran Gagal
+@extends('emails.layout', [
+    'headerTitle' => 'Pembayaran Gagal',
+    'headerSubtitle' => 'Informasi pembayaran Anda'
+])
 
-Halo,
+@section('content')
+    <h2>Halo, {{ $payment->enrollment->student_name }}</h2>
+    
+    <div class="alert alert-danger">
+        <strong>❌ Pembayaran Anda tidak berhasil diproses</strong><br>
+        Nomor Invoice: {{ $payment->invoice_number }}
+    </div>
 
-Kami informasikan bahwa pembayaran Anda **tidak berhasil** diproses.
+    <p>
+        Kami informasikan bahwa pembayaran untuk kelas <strong>{{ $payment->enrollment->class->name }}</strong> 
+        tidak berhasil diproses. Hal ini bisa terjadi karena beberapa alasan:
+    </p>
 
-## Detail Invoice
+    <ul style="color: #555555; padding-left: 20px; line-height: 2; margin: 20px 0;">
+        <li>Saldo tidak mencukupi</li>
+        <li>Transaksi dibatalkan</li>
+        <li>Masalah teknis pada sistem pembayaran</li>
+        <li>Batas waktu pembayaran terlewat</li>
+    </ul>
 
-<x-mail::panel>
-**Nomor Invoice:** {{ $invoiceNumber }}  
-**Nomor Pendaftaran:** {{ $enrollment->enrollment_number }}  
-**Kelas:** {{ $class->name }}  
-**Total:** {{ formatCurrency($amount) }}  
-**Status:** Gagal
-</x-mail::panel>
+    <div class="info-box">
+        <h3>Detail Pembayaran</h3>
+        <div class="info-row">
+            <span class="info-label">Nomor Invoice</span>
+            <span class="info-value">{{ $payment->invoice_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Kelas</span>
+            <span class="info-value">{{ $payment->enrollment->class->name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Total Pembayaran</span>
+            <span class="info-value">{{ $payment->total_amount_formatted }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value"><span style="color: #dc3545; font-weight: 600;">✗ Gagal</span></span>
+        </div>
+    </div>
 
-## Alasan
+    <div class="divider"></div>
 
-{{ $reason }}
+    <h3 style="color: #255d74; font-size: 18px; margin-bottom: 15px;">Apa yang Harus Dilakukan?</h3>
+    
+    <p>
+        Jangan khawatir! Anda masih dapat menyelesaikan pembayaran dan mengamankan tempat Anda di kelas. 
+        Silakan coba lagi dengan mengikuti langkah berikut:
+    </p>
 
-@if($canRetry)
-## Coba Lagi
+    <ol style="color: #555555; padding-left: 20px; line-height: 2;">
+        <li>Pastikan saldo Anda mencukupi</li>
+        <li>Kunjungi dashboard Anda</li>
+        <li>Buat invoice pembayaran baru</li>
+        <li>Selesaikan pembayaran sebelum batas waktu</li>
+    </ol>
 
-Anda dapat mencoba melakukan pembayaran kembali dengan membuat invoice baru.
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{ config('app.url') }}/dashboard/enrollments" class="button">
+            Coba Bayar Lagi
+        </a>
+    </div>
 
-<x-mail::button :url="route('enrollments.show', $enrollment)">
-Buat Invoice Baru
-</x-mail::button>
+    <div class="alert alert-warning">
+        <strong>⚠️ Penting:</strong> Tempat di kelas terbatas. Segera selesaikan pembayaran untuk 
+        memastikan Anda tidak kehilangan kesempatan bergabung dengan kelas ini.
+    </div>
 
-## Tips Pembayaran
-
-- Pastikan saldo rekening/e-wallet Anda mencukupi
-- Periksa limit transaksi harian Anda
-- Gunakan metode pembayaran alternatif jika masalah berlanjut
-- Hubungi bank/provider e-wallet Anda jika ada kendala
-@else
-## Pendaftaran Dibatalkan
-
-Karena pembayaran gagal, pendaftaran Anda telah dibatalkan secara otomatis.
-
-Anda dapat mendaftar kembali kapan saja melalui website kami.
-
-<x-mail::button :url="route('program')">
-Lihat Program
-</x-mail::button>
-@endif
-
-## Butuh Bantuan?
-
-Jika Anda mengalami kesulitan atau memiliki pertanyaan, silakan hubungi kami:
-- Email: support@aici-umg.ac.id
-- WhatsApp: +62 812-3456-7890
-
-Kami siap membantu Anda!
-
-Terima kasih,  
-**{{ config('app.name') }}**
-</x-mail::message>
+    <p style="color: #666666; font-size: 14px; margin-top: 30px;">
+        Jika Anda mengalami kesulitan atau memiliki pertanyaan tentang pembayaran, 
+        silakan hubungi tim support kami. Kami siap membantu Anda!
+    </p>
+@endsection

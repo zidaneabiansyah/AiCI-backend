@@ -1,45 +1,65 @@
-<x-mail::message>
-# Pendaftaran Dibatalkan
+@extends('emails.layout', [
+    'headerTitle' => 'Pendaftaran Dibatalkan',
+    'headerSubtitle' => 'Informasi pembatalan pendaftaran'
+])
 
-Halo **{{ $studentName }}**,
+@section('content')
+    <h2>Halo, {{ $enrollment->student_name }}</h2>
+    
+    <div class="alert alert-danger">
+        <strong>❌ Pendaftaran Anda telah dibatalkan</strong><br>
+        Nomor Pendaftaran: {{ $enrollment->enrollment_number }}
+    </div>
 
-Pendaftaran Anda dengan nomor **{{ $enrollmentNumber }}** telah dibatalkan.
+    <p>
+        Kami informasikan bahwa pendaftaran Anda untuk kelas <strong>{{ $enrollment->class->name }}</strong> 
+        telah dibatalkan.
+    </p>
 
-## Detail Pendaftaran
+    <div class="info-box">
+        <h3>Detail Pembatalan</h3>
+        <div class="info-row">
+            <span class="info-label">Nomor Pendaftaran</span>
+            <span class="info-value">{{ $enrollment->enrollment_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Kelas</span>
+            <span class="info-value">{{ $enrollment->class->name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Tanggal Pembatalan</span>
+            <span class="info-value">{{ $enrollment->cancelled_at_formatted }}</span>
+        </div>
+        @if($enrollment->cancellation_reason)
+        <div class="info-row">
+            <span class="info-label">Alasan</span>
+            <span class="info-value">{{ $enrollment->cancellation_reason }}</span>
+        </div>
+        @endif
+    </div>
 
-<x-mail::panel>
-**Nomor Pendaftaran:** {{ $enrollmentNumber }}  
-**Program:** {{ $program->name }}  
-**Kelas:** {{ $class->name }}  
-**Status:** Dibatalkan
-</x-mail::panel>
+    <div class="divider"></div>
 
-@if($reason)
-## Alasan Pembatalan
+    <h3 style="color: #255d74; font-size: 18px; margin-bottom: 15px;">Ingin Mendaftar Lagi?</h3>
+    
+    <p>
+        Jika Anda masih tertarik untuk bergabung dengan kelas kami, Anda dapat mendaftar kembali 
+        kapan saja melalui website kami. Kami memiliki berbagai kelas menarik yang mungkin sesuai 
+        dengan kebutuhan Anda.
+    </p>
 
-{{ $reason }}
-@endif
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{ config('app.url') }}/classes" class="button">
+            Lihat Kelas Tersedia
+        </a>
+    </div>
 
-@if($hasPayment)
-## Informasi Refund
+    <div class="alert alert-info">
+        <strong>💡 Catatan:</strong> Jika pembatalan ini adalah kesalahan atau Anda memiliki pertanyaan, 
+        silakan hubungi kami segera melalui email atau WhatsApp.
+    </div>
 
-Karena Anda telah melakukan pembayaran, proses refund akan diproses dalam 7-14 hari kerja.
-
-Dana akan dikembalikan ke metode pembayaran yang sama dengan yang Anda gunakan.
-
-Anda akan menerima email konfirmasi setelah refund berhasil diproses.
-@endif
-
-## Ingin Mendaftar Lagi?
-
-Anda dapat mendaftar kembali kapan saja melalui website kami.
-
-<x-mail::button :url="route('program')">
-Lihat Program Lainnya
-</x-mail::button>
-
-Jika ada pertanyaan, silakan hubungi kami di support@aici-umg.ac.id
-
-Terima kasih,  
-**{{ config('app.name') }}**
-</x-mail::message>
+    <p style="color: #666666; font-size: 14px; margin-top: 30px;">
+        Terima kasih atas minat Anda terhadap program kami. Kami berharap dapat melayani Anda di kesempatan lain.
+    </p>
+@endsection
