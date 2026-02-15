@@ -111,6 +111,24 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
 
 /**
  * ============================================
+ * ADMIN ENDPOINTS
+ * ============================================
+ */
+Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+    
+    // Analytics
+    Route::prefix('analytics')->group(function () {
+        Route::get('/overview', [\App\Http\Controllers\Api\Admin\AnalyticsController::class, 'overview'])->name('admin.analytics.overview');
+        Route::get('/revenue', [\App\Http\Controllers\Api\Admin\AnalyticsController::class, 'revenue'])->name('admin.analytics.revenue');
+        Route::get('/enrollments', [\App\Http\Controllers\Api\Admin\AnalyticsController::class, 'enrollments'])->name('admin.analytics.enrollments');
+        Route::get('/students', [\App\Http\Controllers\Api\Admin\AnalyticsController::class, 'students'])->name('admin.analytics.students');
+        Route::get('/tests', [\App\Http\Controllers\Api\Admin\AnalyticsController::class, 'tests'])->name('admin.analytics.tests');
+    });
+    
+});
+
+/**
+ * ============================================
  * API HEALTH CHECK
  * ============================================
  */
