@@ -183,6 +183,44 @@ Route::prefix('v1/admin')->middleware(['auth:sanctum', 'admin'])->group(function
         Route::patch('/contact-messages/{id}/read', [ContentController::class, 'markContactAsRead'])->name('admin.content.contact.read');
     });
     
+    // Articles Management
+    Route::prefix('articles')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Admin\ArticleController::class, 'index'])->name('admin.articles.index');
+        Route::get('/{id}', [\App\Http\Controllers\Api\Admin\ArticleController::class, 'show'])->name('admin.articles.show');
+        Route::post('/', [\App\Http\Controllers\Api\Admin\ArticleController::class, 'store'])->name('admin.articles.store');
+        Route::patch('/{slug}', [\App\Http\Controllers\Api\Admin\ArticleController::class, 'update'])->name('admin.articles.update');
+        Route::delete('/{slug}', [\App\Http\Controllers\Api\Admin\ArticleController::class, 'destroy'])->name('admin.articles.destroy');
+    });
+    
+    // Facilities Management
+    Route::prefix('facilities')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Admin\FacilityController::class, 'index'])->name('admin.facilities.index');
+        Route::get('/{id}', [\App\Http\Controllers\Api\Admin\FacilityController::class, 'show'])->name('admin.facilities.show');
+        Route::post('/', [\App\Http\Controllers\Api\Admin\FacilityController::class, 'store'])->name('admin.facilities.store');
+        Route::patch('/{id}', [\App\Http\Controllers\Api\Admin\FacilityController::class, 'update'])->name('admin.facilities.update');
+        Route::delete('/{id}', [\App\Http\Controllers\Api\Admin\FacilityController::class, 'destroy'])->name('admin.facilities.destroy');
+        Route::post('/reorder', [\App\Http\Controllers\Api\Admin\FacilityController::class, 'reorder'])->name('admin.facilities.reorder');
+    });
+    
+    // Programs Management
+    Route::prefix('programs')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Admin\ProgramController::class, 'index'])->name('admin.programs.index');
+        Route::get('/{id}', [\App\Http\Controllers\Api\Admin\ProgramController::class, 'show'])->name('admin.programs.show');
+        Route::post('/', [\App\Http\Controllers\Api\Admin\ProgramController::class, 'store'])->name('admin.programs.store');
+        Route::patch('/{id}', [\App\Http\Controllers\Api\Admin\ProgramController::class, 'update'])->name('admin.programs.update');
+        Route::delete('/{id}', [\App\Http\Controllers\Api\Admin\ProgramController::class, 'destroy'])->name('admin.programs.destroy');
+        Route::post('/reorder', [\App\Http\Controllers\Api\Admin\ProgramController::class, 'reorder'])->name('admin.programs.reorder');
+    });
+    
+    // Gallery Management
+    Route::prefix('gallery')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Admin\GalleryController::class, 'index'])->name('admin.gallery.index');
+        Route::get('/{id}', [\App\Http\Controllers\Api\Admin\GalleryController::class, 'show'])->name('admin.gallery.show');
+        Route::post('/', [\App\Http\Controllers\Api\Admin\GalleryController::class, 'store'])->name('admin.gallery.store');
+        Route::patch('/{id}', [\App\Http\Controllers\Api\Admin\GalleryController::class, 'update'])->name('admin.gallery.update');
+        Route::delete('/{id}', [\App\Http\Controllers\Api\Admin\GalleryController::class, 'destroy'])->name('admin.gallery.destroy');
+    });
+    
 });
 
 /**
