@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\ClassController as ApiClassController;
+use App\Http\Controllers\Api\ContentController;
 use App\Http\Controllers\Api\FacilityController;
 use App\Http\Controllers\Api\GalleryController;
 use App\Http\Controllers\Api\ProgramController;
@@ -55,6 +56,14 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     // Placement Tests
     Route::get('/placement-tests', [PlacementTestController::class, 'index'])->name('api.placement-tests.index');
     Route::get('/placement-tests/{test:slug}', [PlacementTestController::class, 'show'])->name('api.placement-tests.show');
+    
+    // Content Management (Public Read-Only)
+    Route::get('/content/testimonials', [ContentController::class, 'testimonials'])->name('api.content.testimonials');
+    Route::get('/content/partners', [ContentController::class, 'partners'])->name('api.content.partners');
+    Route::get('/content/settings', [ContentController::class, 'settings'])->name('api.content.settings');
+    Route::get('/content/team', [ContentController::class, 'team'])->name('api.content.team');
+    Route::get('/content/pages', [ContentController::class, 'pageContent'])->name('api.content.pages');
+    Route::post('/content/contact', [ContentController::class, 'sendContact'])->name('api.content.contact');
     
     /**
      * ============================================
@@ -114,7 +123,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
  * ADMIN ENDPOINTS
  * ============================================
  */
-Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+Route::prefix('v1/admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
     
     // Analytics
     Route::prefix('analytics')->group(function () {
@@ -131,6 +140,47 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
         Route::get('/export/revenue', [\App\Http\Controllers\Api\Admin\ReportsController::class, 'exportRevenue'])->name('admin.reports.export.revenue');
         Route::get('/export/enrollment', [\App\Http\Controllers\Api\Admin\ReportsController::class, 'exportEnrollment'])->name('admin.reports.export.enrollment');
         Route::get('/export/student', [\App\Http\Controllers\Api\Admin\ReportsController::class, 'exportStudent'])->name('admin.reports.export.student');
+    });
+    
+    // Schedules
+    Route::prefix('schedules')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\Admin\ScheduleController::class, 'index'])->name('admin.schedules.index');
+        Route::get('/{id}', [\App\Http\Controllers\Api\Admin\ScheduleController::class, 'show'])->name('admin.schedules.show');
+        Route::post('/', [\App\Http\Controllers\Api\Admin\ScheduleController::class, 'store'])->name('admin.schedules.store');
+        Route::patch('/{id}', [\App\Http\Controllers\Api\Admin\ScheduleController::class, 'update'])->name('admin.schedules.update');
+        Route::delete('/{id}', [\App\Http\Controllers\Api\Admin\ScheduleController::class, 'destroy'])->name('admin.schedules.destroy');
+    });
+    
+    // Content Management (Admin CRUD)
+    Route::prefix('content')->group(function () {
+        // Testimonials
+        Route::post('/testimonials', [ContentController::class, 'storeTestimonial'])->name('admin.content.testimonials.store');
+        Route::patch('/testimonials/{id}', [ContentController::class, 'updateTestimonial'])->name('admin.content.testimonials.update');
+        Route::delete('/testimonials/{id}', [ContentController::class, 'deleteTestimonial'])->name('admin.content.testimonials.delete');
+        Route::post('/testimonials/reorder', [ContentController::class, 'reorderTestimonials'])->name('admin.content.testimonials.reorder');
+        
+        // Partners
+        Route::post('/partners', [ContentController::class, 'storePartner'])->name('admin.content.partners.store');
+        Route::patch('/partners/{id}', [ContentController::class, 'updatePartner'])->name('admin.content.partners.update');
+        Route::delete('/partners/{id}', [ContentController::class, 'deletePartner'])->name('admin.content.partners.delete');
+        Route::post('/partners/reorder', [ContentController::class, 'reorderPartners'])->name('admin.content.partners.reorder');
+        
+        // Settings
+        Route::patch('/settings', [ContentController::class, 'updateSettings'])->name('admin.content.settings.update');
+        
+        // Team
+        Route::post('/team', [ContentController::class, 'storeTeamMember'])->name('admin.content.team.store');
+        Route::patch('/team/{id}', [ContentController::class, 'updateTeamMember'])->name('admin.content.team.update');
+        Route::delete('/team/{id}', [ContentController::class, 'deleteTeamMember'])->name('admin.content.team.delete');
+        Route::post('/team/reorder', [ContentController::class, 'reorderTeamMembers'])->name('admin.content.team.reorder');
+        
+        // Page Content
+        Route::post('/pages', [ContentController::class, 'storePageContent'])->name('admin.content.pages.store');
+        Route::patch('/pages/{key}', [ContentController::class, 'updatePageContent'])->name('admin.content.pages.update');
+        
+        // Contact Messages
+        Route::get('/contact-messages', [ContentController::class, 'contactMessages'])->name('admin.content.contact.index');
+        Route::patch('/contact-messages/{id}/read', [ContentController::class, 'markContactAsRead'])->name('admin.content.contact.read');
     });
     
 });
