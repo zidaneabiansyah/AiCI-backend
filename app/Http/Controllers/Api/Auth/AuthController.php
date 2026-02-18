@@ -41,6 +41,7 @@ class AuthController extends BaseController
         return $this->successResponse([
             'user' => $user,
             'access_token' => $token,
+            'access' => $token,
             'token_type' => 'Bearer',
         ], 'User registered successfully', 201);
     }
@@ -70,6 +71,7 @@ class AuthController extends BaseController
         return $this->successResponse([
             'user' => $user,
             'access_token' => $token,
+            'access' => $token,
             'token_type' => 'Bearer',
         ], 'Login successful');
     }
