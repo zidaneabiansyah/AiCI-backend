@@ -26,7 +26,15 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::prefix('v1')->middleware('throttle:api')->group(function () {
-    
+    /**
+     * ============================================
+     * AUTH (API) - Public endpoints for token auth
+     * ============================================
+     */
+    Route::post('/auth/register', [\App\Http\Controllers\Api\Auth\AuthController::class, 'register'])->name('api.auth.register');
+    Route::post('/auth/login', [\App\Http\Controllers\Api\Auth\AuthController::class, 'login'])->name('api.auth.login');
+    Route::post('/auth/logout', [\App\Http\Controllers\Api\Auth\AuthController::class, 'logout'])->middleware('auth:sanctum')->name('api.auth.logout');
+
     /**
      * ============================================
      * PUBLIC ENDPOINTS (No Authentication)

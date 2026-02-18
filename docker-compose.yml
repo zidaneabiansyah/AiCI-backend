@@ -1,0 +1,137 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aici-backend-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment: &laravel_env
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DOCKER_DB_DATABASE:-aici_db}
+      DB_USERNAME: ${DOCKER_DB_USERNAME:-aici_user}
+      DB_PASSWORD: ${DOCKER_DB_PASSWORD:-aici_pass}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: null
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+    volumes:
+      - ./:/var/www/html
+      - aici_vendor:/var/www/html/vendor
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aici_network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: aici-backend-nginx
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_APP_PORT:-8000}:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - aici_network
+
+  db:
+    image: mariadb:10.11
+    container_name: aici-backend-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DOCKER_DB_ROOT_PASSWORD:-rootpass}
+      MARIADB_DATABASE: ${DOCKER_DB_DATABASE:-aici_db}
+      MARIADB_USER: ${DOCKER_DB_USERNAME:-aici_user}
+      MARIADB_PASSWORD: ${DOCKER_DB_PASSWORD:-aici_pass}
+    ports:
+      - "${DOCKER_DB_PORT:-3307}:3306"
+    volumes:
+      - aici_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -p$${MARIADB_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - aici_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: aici-backend-redis
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_REDIS_PORT:-6380}:6379"
+    volumes:
+      - aici_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - aici_network
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aici-backend-queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan queue:work --tries=1 --timeout=120
+    environment: *laravel_env
+    volumes:
+      - ./:/var/www/html
+      - aici_vendor:/var/www/html/vendor
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+    networks:
+      - aici_network
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aici-backend-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    environment: *laravel_env
+    volumes:
+      - ./:/var/www/html
+      - aici_vendor:/var/www/html/vendor
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+    networks:
+      - aici_network
+
+volumes:
+  aici_db_data:
+  aici_redis_data:
+  aici_vendor:
+
+networks:
+  aici_network:
+    driver: bridge
