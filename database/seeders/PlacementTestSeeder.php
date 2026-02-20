@@ -24,6 +24,7 @@ class PlacementTestSeeder extends Seeder
         $tests = [
             [
                 'title' => 'Placement Test SD/MI',
+                'slug' => 'placement-test-sd-mi',
                 'education_level' => 'sd_mi',
                 'description' => 'Test penempatan untuk siswa SD/MI. Test ini akan membantu menentukan kelas yang sesuai dengan kemampuan Anda.',
                 'duration_minutes' => 30,
@@ -36,6 +37,7 @@ class PlacementTestSeeder extends Seeder
             ],
             [
                 'title' => 'Placement Test SMP/MTs',
+                'slug' => 'placement-test-smp-mts',
                 'education_level' => 'smp_mts',
                 'description' => 'Test penempatan untuk siswa SMP/MTs. Test ini akan membantu menentukan kelas yang sesuai dengan kemampuan Anda.',
                 'duration_minutes' => 45,
@@ -48,6 +50,7 @@ class PlacementTestSeeder extends Seeder
             ],
             [
                 'title' => 'Placement Test SMA/MA/SMK',
+                'slug' => 'placement-test-sma-ma-smk',
                 'education_level' => 'sma_ma_smk',
                 'description' => 'Test penempatan untuk siswa SMA/MA/SMK. Test ini akan membantu menentukan kelas yang sesuai dengan kemampuan Anda.',
                 'duration_minutes' => 60,

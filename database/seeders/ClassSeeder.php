@@ -35,6 +35,7 @@ class ClassSeeder extends Seeder
                 ClassModel::create([
                     'program_id' => $program->id,
                     'name' => $program->name . ' - ' . ucfirst($level),
+                    'slug' => $program->slug . '-' . $level,
                     'code' => strtoupper(substr(str_replace('-', '', $program->slug), 0, 6)) . '-' . $program->id . str_pad($i, 2, '0', STR_PAD_LEFT),
                     'level' => $level,
                     'description' => "Kelas {$level} untuk program {$program->name}. Cocok untuk siswa yang sudah memiliki pemahaman dasar.",

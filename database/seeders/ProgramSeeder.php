@@ -16,6 +16,7 @@ class ProgramSeeder extends Seeder
             // SD/MI Programs
             [
                 'name' => 'AI Fantasy Zoo',
+                'slug' => 'ai-fantasy-zoo',
                 'education_level' => 'sd_mi',
                 'description' => 'Program pengenalan AI untuk siswa kelas 1-3 SD dengan konsep fun learning menggunakan tema kebun binatang fantasi.',
                 'objectives' => [
@@ -31,6 +32,7 @@ class ProgramSeeder extends Seeder
             ],
             [
                 'name' => 'Ukit Advanced',
+                'slug' => 'ukit-advanced',
                 'education_level' => 'sd_mi',
                 'description' => 'Program lanjutan untuk siswa yang sudah menyelesaikan AI Fantasy Zoo.',
                 'objectives' => [
@@ -46,6 +48,7 @@ class ProgramSeeder extends Seeder
             ],
             [
                 'name' => 'AI Smart Life',
+                'slug' => 'ai-smart-life',
                 'education_level' => 'sd_mi',
                 'description' => 'Program AI untuk siswa kelas 4-5 SD dengan fokus pada aplikasi AI dalam kehidupan sehari-hari.',
                 'objectives' => [
@@ -61,6 +64,7 @@ class ProgramSeeder extends Seeder
             ],
             [
                 'name' => 'Advanced Smart Life',
+                'slug' => 'advanced-smart-life',
                 'education_level' => 'sd_mi',
                 'description' => 'Program lanjutan AI Smart Life dengan project yang lebih kompleks.',
                 'objectives' => [
@@ -76,6 +80,7 @@ class ProgramSeeder extends Seeder
             ],
             [
                 'name' => 'AI Super Assistant',
+                'slug' => 'ai-super-assistant',
                 'education_level' => 'sd_mi',
                 'description' => 'Program untuk siswa kelas 6 SD yang sudah menyelesaikan Advanced Smart Life.',
                 'objectives' => [
@@ -93,6 +98,7 @@ class ProgramSeeder extends Seeder
             // SMP/MTS Programs
             [
                 'name' => 'AI Transformer Workshop',
+                'slug' => 'ai-transformer-workshop',
                 'education_level' => 'smp_mts',
                 'description' => 'Program AI untuk siswa SMP kelas 7-9 dengan fokus pada robotika dan transformasi digital.',
                 'objectives' => [
@@ -108,6 +114,7 @@ class ProgramSeeder extends Seeder
             ],
             [
                 'name' => 'AI Magic World',
+                'slug' => 'ai-magic-world',
                 'education_level' => 'smp_mts',
                 'description' => 'Program lanjutan untuk siswa yang sudah menyelesaikan AI Transformer Workshop.',
                 'objectives' => [
@@ -125,6 +132,7 @@ class ProgramSeeder extends Seeder
             // SMA/MA Programs
             [
                 'name' => 'AI Super Engineer',
+                'slug' => 'ai-super-engineer',
                 'education_level' => 'sma_ma_smk',
                 'description' => 'Program AI engineering untuk siswa SMA kelas 10-12.',
                 'objectives' => [
@@ -140,6 +148,7 @@ class ProgramSeeder extends Seeder
             ],
             [
                 'name' => 'AI Future Town',
+                'slug' => 'ai-future-town',
                 'education_level' => 'sma_ma_smk',
                 'description' => 'Program untuk siswa yang sudah menyelesaikan AI Super Engineer dengan fokus pada smart city.',
                 'objectives' => [
@@ -155,6 +164,7 @@ class ProgramSeeder extends Seeder
             ],
             [
                 'name' => 'AI Super Designer',
+                'slug' => 'ai-super-designer',
                 'education_level' => 'sma_ma_smk',
                 'description' => 'Program elite untuk siswa dengan predikat excellent dari AI Future Town.',
                 'objectives' => [

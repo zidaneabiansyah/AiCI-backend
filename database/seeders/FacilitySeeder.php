@@ -23,6 +23,7 @@ class FacilitySeeder extends Seeder
         return [
             [
                 'name' => 'AI Research Laboratory',
+                'slug' => 'ai-research-laboratory',
                 'description' => 'Laboratorium penelitian AI dengan workstation high-performance untuk deep learning dan computer vision research.',
                 'type' => 'lab',
                 'quantity' => 1,
@@ -38,6 +39,7 @@ class FacilitySeeder extends Seeder
             ],
             [
                 'name' => 'Robotics Workshop',
+                'slug' => 'robotics-workshop',
                 'description' => 'Workshop robotika dengan berbagai robot kit dan tools untuk pembelajaran hands-on.',
                 'type' => 'lab',
                 'quantity' => 1,
@@ -53,6 +55,7 @@ class FacilitySeeder extends Seeder
             ],
             [
                 'name' => 'Smart Classroom',
+                'slug' => 'smart-classroom',
                 'description' => 'Ruang kelas pintar dengan teknologi interactive learning dan AR/VR equipment.',
                 'type' => 'room',
                 'quantity' => 1,
@@ -68,6 +71,7 @@ class FacilitySeeder extends Seeder
             ],
             [
                 'name' => 'LEGO Mindstorms EV3',
+                'slug' => 'lego-mindstorms-ev3',
                 'description' => 'Robot kit untuk pembelajaran robotika tingkat menengah.',
                 'type' => 'kit',
                 'quantity' => 20,
@@ -81,6 +85,7 @@ class FacilitySeeder extends Seeder
             ],
             [
                 'name' => 'Arduino Starter Kit',
+                'slug' => 'arduino-starter-kit',
                 'description' => 'Kit elektronika untuk belajar programming dan IoT.',
                 'type' => 'kit',
                 'quantity' => 15,
