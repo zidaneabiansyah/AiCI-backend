@@ -27,7 +27,7 @@ class ProgramController extends BaseController
      */
     public function index(Request $request)
     {
-        $query = Program::query();
+        $query = Program::select('id', 'name', 'slug', 'education_level', 'description', 'objectives', 'image', 'min_age', 'max_age', 'duration_weeks', 'sort_order');
 
         // Filter by education level
         if ($request->has('education_level')) {
@@ -43,7 +43,9 @@ class ProgramController extends BaseController
         // Include classes if requested
         if ($request->boolean('with_classes')) {
             $query->with(['classes' => function ($q) {
-                $q->active()->orderBy('sort_order');
+                $q->select('id', 'program_id', 'name', 'slug', 'level', 'price', 'duration_hours', 'capacity', 'enrolled_count')
+                    ->active()
+                    ->orderBy('sort_order');
             }]);
         }
 

@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
             //
         ]);
 
+        // Add compression middleware to API routes
+        $middleware->api(append: [
+            \App\Http\Middleware\CompressResponse::class,
+        ]);
+
         // Register middleware aliases
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,

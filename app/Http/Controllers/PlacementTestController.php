@@ -33,20 +33,10 @@ class PlacementTestController extends BaseController
      */
     public function index(): JsonResponse
     {
-        $tests = PlacementTest::active()
+        $tests = PlacementTest::select('id', 'title', 'slug', 'description', 'education_level', 'duration_minutes', 'total_questions')
+            ->active()
             ->orderBy('education_level')
-            ->get()
-            ->map(function ($test) {
-                return [
-                    'id' => $test->id,
-                    'title' => $test->title,
-                    'slug' => $test->slug,
-                    'description' => $test->description,
-                    'education_level' => $test->education_level,
-                    'duration_minutes' => $test->duration_minutes,
-                    'total_questions' => $test->total_questions,
-                ];
-            });
+            ->get();
 
         return $this->successResponse($tests, 'Available placement tests retrieved');
     }

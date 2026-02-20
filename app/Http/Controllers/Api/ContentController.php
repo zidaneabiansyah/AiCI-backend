@@ -21,7 +21,9 @@ class ContentController extends Controller
     
     public function testimonials()
     {
-        $testimonials = Testimonial::orderBy('order')->get();
+        $testimonials = Testimonial::select('id', 'name', 'role', 'quote', 'photo', 'order')
+            ->orderBy('order')
+            ->get();
         
         return response()->json([
             'success' => true,
@@ -134,7 +136,9 @@ class ContentController extends Controller
     
     public function partners()
     {
-        $partners = Partner::orderBy('order')->get();
+        $partners = Partner::select('id', 'name', 'logo', 'website_url', 'order')
+            ->orderBy('order')
+            ->get();
         
         return response()->json([
             'success' => true,
@@ -298,7 +302,7 @@ class ContentController extends Controller
     
     public function team(Request $request)
     {
-        $query = TeamMember::query();
+        $query = TeamMember::select('id', 'name', 'position', 'role_type', 'photo', 'order');
         
         if ($request->has('role_type')) {
             $query->where('role_type', $request->role_type);
@@ -417,18 +421,26 @@ class ContentController extends Controller
     
     public function pageContent(Request $request)
     {
-        $query = PageContent::query();
+        $query = PageContent::select('key', 'title', 'content', 'image', 'updated_at');
         
         if ($request->has('key')) {
             $content = $query->where('key', $request->key)->first();
             return response()->json($content ?: []);
         }
         
-        $contents = $query->get();
+        // Add pagination for listing all pages
+        $perPage = min($request->integer('per_page', 20), 50);
+        $contents = $query->paginate($perPage);
         
         return response()->json([
             'success' => true,
-            'results' => $contents,
+            'data' => $contents->items(),
+            'pagination' => [
+                'total' => $contents->total(),
+                'per_page' => $contents->perPage(),
+                'current_page' => $contents->currentPage(),
+                'last_page' => $contents->lastPage(),
+            ],
         ]);
     }
     

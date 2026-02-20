@@ -31,7 +31,8 @@ class ClassController extends BaseController
      */
     public function index(Request $request)
     {
-        $query = ClassModel::with('program')
+        $query = ClassModel::select('id', 'program_id', 'name', 'slug', 'code', 'level', 'description', 'price', 'duration_hours', 'capacity', 'enrolled_count', 'is_featured', 'image', 'sort_order')
+            ->with(['program:id,name,slug,education_level'])
             ->active();
 
         // Filter by program
@@ -78,7 +79,10 @@ class ClassController extends BaseController
         $classes = $query->paginate(12);
 
         // Get programs for filter
-        $programs = Program::active()->ordered()->get();
+        $programs = Program::select('id', 'name', 'slug', 'education_level', 'sort_order')
+            ->active()
+            ->ordered()
+            ->get();
 
         return Inertia::render('Classes/Index', [
             'classes' => $classes->through(function ($class) {
@@ -117,11 +121,13 @@ class ClassController extends BaseController
      */
     public function show(ClassModel $class)
     {
-        // Load relationships
+        // Load relationships with specific columns
         $class->load([
-            'program',
+            'program:id,name,slug,education_level,description',
             'schedules' => function ($query) {
-                $query->available()->orderBy('start_date');
+                $query->select('id', 'class_id', 'batch_name', 'start_date', 'end_date', 'day_of_week', 'start_time', 'end_time', 'location', 'instructor_name', 'capacity', 'enrolled_count', 'is_available')
+                    ->available()
+                    ->orderBy('start_date');
             }
         ]);
 

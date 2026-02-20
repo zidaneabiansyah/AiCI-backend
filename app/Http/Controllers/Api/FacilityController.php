@@ -16,7 +16,8 @@ class FacilityController extends BaseController
      */
     public function index()
     {
-        $facilities = Facility::where('is_active', true)
+        $facilities = Facility::select('id', 'name', 'slug', 'description', 'type', 'quantity', 'specifications', 'sort_order')
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->get();
 

@@ -26,7 +26,8 @@ class ArticleController extends BaseController
      */
     public function index(Request $request)
     {
-        $query = Article::published();
+        $query = Article::select('id', 'title', 'slug', 'excerpt', 'thumbnail', 'category', 'published_at', 'views_count', 'created_at')
+            ->published();
 
         // Filter by category
         if ($request->has('category')) {
@@ -38,12 +39,11 @@ class ArticleController extends BaseController
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('content', 'like', "%{$search}%")
                     ->orWhere('excerpt', 'like', "%{$search}%");
             });
         }
 
-        $perPage = $request->integer('per_page', 15);
+        $perPage = min($request->integer('per_page', 15), 50); // Max 50 items per page
         $articles = $query->latest('published_at')
             ->paginate($perPage);
 

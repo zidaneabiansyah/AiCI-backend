@@ -20,16 +20,22 @@ class GalleryController extends BaseController
      */
     public function index(Request $request)
     {
-        $query = Gallery::where('is_active', true);
+        $query = Gallery::select('id', 'title', 'description', 'image', 'category', 'event_date', 'is_featured', 'sort_order')
+            ->where('is_active', true);
 
         // Filter by category
         if ($request->has('category')) {
             $query->where('category', $request->category);
         }
 
-        $perPage = $request->integer('per_page', 20);
+        // Filter by featured
+        if ($request->has('is_featured')) {
+            $query->where('is_featured', $request->boolean('is_featured'));
+        }
+
+        $perPage = min($request->integer('per_page', 20), 50); // Max 50 items
         $galleries = $query->orderBy('sort_order')
-            ->latest()
+            ->latest('event_date')
             ->paginate($perPage);
 
         return $this->successResponse(
