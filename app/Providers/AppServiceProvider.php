@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Cache\UpstashStore;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -23,6 +24,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+        
+        // Register custom Upstash cache driver
+        $this->app['cache']->extend('upstash', function ($app) {
+            $baseUrl = config('cache.stores.upstash.url');
+            $token = config('cache.stores.upstash.token');
+            
+            return $app['cache']->repository(
+                new UpstashStore($baseUrl, $token)
+            );
+        });
         
         // Define API rate limiter
         RateLimiter::for('api', function (Request $request) {

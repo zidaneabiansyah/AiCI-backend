@@ -10,14 +10,14 @@ class GalleryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'id' => (string) $this->id,
             'title' => $this->title,
             'description' => $this->description,
-            'image_url' => $this->image_url,
-            'thumbnail_url' => $this->thumbnail_url,
+            'image' => $this->image,
             'category' => $this->category,
+            'category_display' => ucfirst(str_replace('_', ' ', $this->category)),
             'sort_order' => $this->sort_order,
-            'is_active' => $this->is_active,
+            'is_featured' => $this->is_featured,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

@@ -58,9 +58,9 @@ class EnrollmentController extends BaseController
                     'price_formatted' => formatCurrency($enrollment->class->price),
                     'program_name' => $enrollment->class->program->name,
                 ],
-                'schedule' => $enrollment->schedule ? [
-                    'batch_name' => $enrollment->schedule->batch_name,
-                    'start_date' => formatDate($enrollment->schedule->start_date),
+                'schedule' => $enrollment->classSchedule ? [
+                    'batch_name' => $enrollment->classSchedule->batch_name,
+                    'start_date' => formatDate($enrollment->classSchedule->start_date),
                 ] : null,
                 'payment' => $enrollment->payment ? [
                     'status' => $enrollment->payment->status->value,

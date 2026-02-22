@@ -356,7 +356,8 @@ class EnrollmentService extends BaseService
     public function getUserEnrollments(User $user, ?string $status = null)
     {
         $query = Enrollment::where('user_id', $user->id)
-            ->with(['class.program', 'schedule', 'payment'])
+            ->with(['class.program', 'classSchedule', 'payment'])
+            ->withoutTrashed()
             ->orderBy('created_at', 'desc');
 
         if ($status) {

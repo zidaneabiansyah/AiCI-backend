@@ -78,6 +78,12 @@ return [
             'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
         ],
 
+        'upstash' => [
+            'driver' => 'upstash',
+            'url' => env('UPSTASH_REDIS_REST_URL'),
+            'token' => env('UPSTASH_REDIS_REST_TOKEN'),
+        ],
+
         'dynamodb' => [
             'driver' => 'dynamodb',
             'key' => env('AWS_ACCESS_KEY_ID'),

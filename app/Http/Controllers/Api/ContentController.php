@@ -249,13 +249,22 @@ class ContentController extends Controller
     
     public function settings()
     {
-        $settings = SiteSetting::first();
-        
-        if (!$settings) {
-            $settings = SiteSetting::create([
-                'site_name' => 'AiCI',
-            ]);
-        }
+        // Cache settings for 24 hours to avoid repeated queries
+        $settings = \Illuminate\Support\Facades\Cache::remember(
+            'site_settings',
+            \Carbon\Carbon::now()->addDay(),
+            function () {
+                $settings = SiteSetting::first();
+                
+                if (!$settings) {
+                    $settings = SiteSetting::create([
+                        'site_name' => 'AiCI',
+                    ]);
+                }
+                
+                return $settings;
+            }
+        );
         
         return response()->json($settings);
     }
@@ -289,6 +298,9 @@ class ContentController extends Controller
         }
         
         $settings->update($validator->validated());
+        
+        // Clear cache after update
+        \Illuminate\Support\Facades\Cache::forget('site_settings');
         
         return response()->json([
             'success' => true,

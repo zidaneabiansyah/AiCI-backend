@@ -33,13 +33,12 @@ class GalleryController extends BaseController
             $query->where('is_featured', $request->boolean('is_featured'));
         }
 
-        $perPage = min($request->integer('per_page', 20), 50); // Max 50 items
         $galleries = $query->orderBy('sort_order')
             ->latest('event_date')
-            ->paginate($perPage);
+            ->get();
 
         return $this->successResponse(
-            GalleryResource::collection($galleries)->response()->getData(true),
+            GalleryResource::collection($galleries),
             'Galleries retrieved successfully'
         );
     }
