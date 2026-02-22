@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
             );
         });
         
-        // Define API rate limiter
+        // Define API rate limiter with database store to avoid Upstash limitations
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });

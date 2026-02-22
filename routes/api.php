@@ -14,6 +14,7 @@ use App\Http\Controllers\ClassController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Middleware\ThrottleApiRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -26,7 +27,7 @@ use Illuminate\Support\Facades\Route;
  * Base URL: /api/v1
  */
 
-Route::prefix('v1')->middleware('throttle:api')->group(function () {
+Route::prefix('v1')->middleware(ThrottleApiRequests::class)->group(function () {
     /**
      * ============================================
      * AUTH (API) - Public endpoints for token auth
