@@ -15,10 +15,20 @@ class FacilityController extends Controller
         $query = Facility::query();
         
         if ($request->has('category')) {
-            $query->where('category', $request->category);
+            $query->where('type', $request->category);
         }
         
-        $facilities = $query->orderBy('order')->get();
+        $facilities = $query->orderBy('sort_order')->get()->map(function ($facility) {
+            return [
+                'id' => $facility->id,
+                'category' => $facility->type,
+                'category_display' => ucfirst(strtolower($facility->type)),
+                'title' => $facility->name,
+                'description' => $facility->description,
+                'image' => $facility->image ? '/storage/' . $facility->image : null,
+                'order' => $facility->sort_order,
+            ];
+        });
         
         return response()->json([
             'success' => true,
@@ -32,7 +42,15 @@ class FacilityController extends Controller
         
         return response()->json([
             'success' => true,
-            'data' => $facility,
+            'data' => [
+                'id' => $facility->id,
+                'category' => $facility->type,
+                'category_display' => ucfirst(strtolower($facility->type)),
+                'title' => $facility->name,
+                'description' => $facility->description,
+                'image' => $facility->image ? '/storage/' . $facility->image : null,
+                'order' => $facility->sort_order,
+            ],
         ]);
     }
     
@@ -56,11 +74,18 @@ class FacilityController extends Controller
         
         $data = $validator->validated();
         
+        $mappedData = [
+            'type' => $data['category'],
+            'name' => $data['title'],
+            'description' => $data['description'],
+            'sort_order' => $data['order'] ?? 0,
+        ];
+        
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('facilities', 'public');
+            $mappedData['image'] = $request->file('image')->store('facilities', 'public');
         }
         
-        $facility = Facility::create($data);
+        $facility = Facility::create($mappedData);
         
         return response()->json([
             'success' => true,
@@ -90,14 +115,20 @@ class FacilityController extends Controller
         
         $data = $validator->validated();
         
+        $mappedData = [];
+        if (isset($data['category'])) $mappedData['type'] = $data['category'];
+        if (isset($data['title'])) $mappedData['name'] = $data['title'];
+        if (isset($data['description'])) $mappedData['description'] = $data['description'];
+        if (isset($data['order'])) $mappedData['sort_order'] = $data['order'];
+        
         if ($request->hasFile('image')) {
             if ($facility->image) {
                 Storage::disk('public')->delete($facility->image);
             }
-            $data['image'] = $request->file('image')->store('facilities', 'public');
+            $mappedData['image'] = $request->file('image')->store('facilities', 'public');
         }
         
-        $facility->update($data);
+        $facility->update($mappedData);
         
         return response()->json([
             'success' => true,
@@ -126,7 +157,7 @@ class FacilityController extends Controller
         $ids = $request->input('ids', []);
         
         foreach ($ids as $index => $id) {
-            Facility::where('id', $id)->update(['order' => $index]);
+            Facility::where('id', $id)->update(['sort_order' => $index]);
         }
         
         return response()->json([

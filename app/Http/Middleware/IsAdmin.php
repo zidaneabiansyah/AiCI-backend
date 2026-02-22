@@ -35,12 +35,12 @@ class IsAdmin
         }
 
         // Check if user has admin role
-        if ($request->user()->role !== UserRole::ADMIN) {
+        if (!$request->user()->isAdmin()) {
             // Log unauthorized access attempt
             Log::channel('activity')->warning('Unauthorized admin access attempt', [
                 'user_id' => $request->user()->id,
                 'email' => $request->user()->email,
-                'role' => $request->user()->role->value,
+                'role' => $request->user()->role,
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
                 'url' => $request->fullUrl(),
