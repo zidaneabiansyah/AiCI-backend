@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ArticleController;
+use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\ClassController as ApiClassController;
 use App\Http\Controllers\Api\ContentController;
 use App\Http\Controllers\Api\FacilityController;
@@ -72,6 +73,9 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () {
     Route::get('/content/team', [ContentController::class, 'team'])->name('api.content.team');
     Route::get('/content/pages', [ContentController::class, 'pageContent'])->name('api.content.pages');
     Route::post('/content/contact', [ContentController::class, 'sendContact'])->name('api.content.contact');
+    
+    // Batch API - Fetch multiple resources in single request
+    Route::post('/batch', [BatchController::class, 'process'])->name('api.batch.process');
     
     /**
      * ============================================

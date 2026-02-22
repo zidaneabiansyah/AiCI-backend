@@ -610,36 +610,27 @@ class PlacementTestService extends BaseService
      */
     protected function getQuestionsWithAnswers(TestAttempt $attempt): Collection
     {
-        return $attempt->placementTest
-            ->getActiveQuestions()
-            ->map(function ($question) use ($attempt) {
-                $answer = $this->findUserAnswer($attempt, $question);
+        $questions = $attempt->placementTest->getActiveQuestions();
+        
+        // Batch load all answers for this attempt in single query
+        $answers = TestAnswer::where('test_attempt_id', $attempt->id)
+            ->get()
+            ->keyBy('test_question_id');
+        
+        return $questions->map(function ($question) use ($answers) {
+            $answer = $answers->get($question->id);
 
-                return [
-                    'id' => $question->id,
-                    'question' => $question->question,
-                    'type' => $question->type->value,
-                    'options' => $question->options,
-                    'image' => $question->image,
-                    'time_limit_seconds' => $question->time_limit_seconds,
-                    'is_answered' => $answer !== null,
-                    'user_answer' => $answer?->user_answer,
-                ];
-            });
-    }
-
-    /**
-     * Find user's answer for a question
-     * 
-     * @param TestAttempt $attempt
-     * @param TestQuestion $question
-     * @return TestAnswer|null
-     */
-    protected function findUserAnswer(TestAttempt $attempt, TestQuestion $question): ?TestAnswer
-    {
-        return TestAnswer::where('test_attempt_id', $attempt->id)
-            ->where('test_question_id', $question->id)
-            ->first();
+            return [
+                'id' => $question->id,
+                'question' => $question->question,
+                'type' => $question->type->value,
+                'options' => $question->options,
+                'image' => $question->image,
+                'time_limit_seconds' => $question->time_limit_seconds,
+                'is_answered' => $answer !== null,
+                'user_answer' => $answer?->user_answer,
+            ];
+        });
     }
 
     /**
